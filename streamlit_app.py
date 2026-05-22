@@ -5,1017 +5,1251 @@ import pandas as pd
 import streamlit as st
 
 
+# ---------------------------------------------------------------------
+# PAGE CONFIG
+# ---------------------------------------------------------------------
+
 st.set_page_config(
-    page_title="DPIA+ FRIA Legal Risk Selection Tool",
+    page_title="DPIA-based Fundamental Rights Assessment Tool",
     layout="wide"
+)
+
+st.title("DPIA-based Fundamental Rights Assessment Tool")
+st.caption(
+    "A DPIA-based workflow for identifying, reasoning about, and documenting "
+    "fundamental-rights risks in AI and data-driven decision-making."
 )
 
 
 # ---------------------------------------------------------------------
-# 1. CATALOGHI DI BASE
+# OPTIONS
 # ---------------------------------------------------------------------
 
+FILER_ROLES = [
+    "Controller / data protection team",
+    "Provider",
+    "Deployer",
+    "Joint assessment team",
+    "Other"
+]
+
 CONTEXTS = [
-    "Lavoro/HR",
-    "Istruzione",
-    "Credito/assicurazioni",
-    "Welfare/servizi pubblici",
-    "Sanità",
-    "Giustizia/polizia/migrazione",
-    "Piattaforme/contenuti",
+    "Employment/HR",
+    "Education",
+    "Credit/insurance",
+    "Welfare/public services",
+    "Healthcare",
+    "Justice/policing/migration",
+    "Platforms/content",
     "Marketing/CRM",
-    "Sicurezza fisica/accessi",
-    "Altro"
+    "Physical security/access",
+    "Other"
 ]
 
 ACTIONS = [
     "Scoring/ranking",
-    "Classificazione",
-    "Raccomandazione",
-    "Esclusione/de-prioritizzazione",
-    "Monitoraggio/sorveglianza",
-    "Verifica identità/biometria",
-    "Moderazione/ordinamento contenuti",
-    "Predizione rischio/affidabilità",
-    "Generazione contenuti",
-    "Altro"
+    "Classification",
+    "Recommendation",
+    "Exclusion/de-prioritisation",
+    "Monitoring/surveillance",
+    "Identity verification/biometrics",
+    "Content moderation/ranking",
+    "Risk prediction",
+    "Content generation",
+    "Other"
 ]
 
 DATA_CATEGORIES = [
-    "Nessun dato personale",
-    "Dati personali comuni",
-    "Dati particolari art. 9 GDPR",
-    "Dati biometrici",
-    "Dati inferiti/profilazione",
-    "Dati comportamentali",
-    "Dati da fonti multiple",
+    "No personal data",
+    "Common personal data",
+    "Special categories of data",
+    "Biometric data",
+    "Inferred/profiling data",
+    "Behavioural data",
+    "Data from multiple sources",
     "Proxy variables",
-    "Dati di minori"
-]
-
-GROUPS = [
-    "Lavoratori/candidati",
-    "Studenti",
-    "Pazienti",
-    "Beneficiari welfare",
-    "Consumatori",
-    "Minori",
-    "Migranti/richiedenti asilo",
-    "Persone con disabilità",
-    "Gruppi protetti o vulnerabili",
-    "Pubblico generale"
-]
-
-LEGAL_BASES = [
-    "Da definire",
-    "Consenso",
-    "Contratto",
-    "Obbligo legale",
-    "Interesse pubblico",
-    "Interesse legittimo",
-    "Tutela interessi vitali",
-    "Non applicabile / da verificare"
+    "Children's data"
 ]
 
 DECISION_EFFECTS = [
-    "Nessun effetto significativo",
-    "Supporto a decisione umana",
-    "Effetti giuridici o similmente significativi",
-    "Esclusione/accesso/priorità in servizi o opportunità"
+    "No significant effect",
+    "Support to human decision",
+    "Legal or similarly significant effect",
+    "Access/exclusion/priority in services or opportunities"
+]
+
+GROUPS = [
+    "Workers/candidates",
+    "Students",
+    "Patients",
+    "Welfare beneficiaries",
+    "Consumers",
+    "Children",
+    "Migrants/asylum seekers",
+    "Persons with disabilities",
+    "Protected or vulnerable groups",
+    "General public"
+]
+
+LEGAL_BASES = [
+    "To be determined",
+    "Consent",
+    "Contract",
+    "Legal obligation",
+    "Public interest",
+    "Legitimate interest",
+    "Vital interests",
+    "Not applicable / to be verified"
+]
+
+YES_NO_OPTIONS = [
+    "Yes",
+    "No",
+    "Partly",
+    "To be verified"
 ]
 
 
 # ---------------------------------------------------------------------
-# 2. CATALOGO RISCHI GIURIDICI
+# FUNDAMENTAL RIGHTS RISK CATALOGUE
 # ---------------------------------------------------------------------
 
 RISK_CATALOG = [
     {
-        "id": "R1",
-        "name": "Trattamento eccedente o non proporzionato di dati",
-        "rights": ["privacy", "protezione dei dati", "autonomia informativa"],
+        "id": "FR1",
+        "risk": "Excessive or disproportionate data processing",
+        "rights": [
+            "Privacy",
+            "Data protection",
+            "Informational self-determination"
+        ],
         "triggers": {
             "data_categories": [
-                "Dati personali comuni",
-                "Dati particolari art. 9 GDPR",
-                "Dati biometrici",
-                "Dati inferiti/profilazione",
-                "Dati comportamentali",
-                "Dati da fonti multiple",
-                "Dati di minori"
-            ],
-            "actions": [
-                "Scoring/ranking",
-                "Classificazione",
-                "Monitoraggio/sorveglianza",
-                "Predizione rischio/affidabilità"
+                "Common personal data",
+                "Special categories of data",
+                "Biometric data",
+                "Inferred/profiling data",
+                "Behavioural data",
+                "Data from multiple sources",
+                "Children's data"
             ]
         },
-        "baseline": "medio",
-        "questions": [
-            "Tutti i dati trattati sono necessari rispetto alla finalità dichiarata?",
-            "Sono trattati dati inferiti o derivati non immediatamente visibili alla persona?",
-            "Esistono alternative meno intrusive?",
-            "La persona può esercitare accesso, rettifica, opposizione o limitazione?"
+        "mechanisms": [
+            "Data minimisation failure",
+            "Purpose creep",
+            "Invisible inference",
+            "Excessive retention",
+            "Combination of datasets beyond reasonable expectations"
         ],
-        "measures": [
-            "minimizzazione dei dati",
-            "limitazione della finalità",
-            "limiti di conservazione",
-            "informativa comprensibile",
-            "diritti dell'interessato effettivi"
+        "questions": [
+            "Are all data strictly necessary for the stated purpose?",
+            "Are inferred or derived data used?",
+            "Is there a less intrusive alternative?",
+            "Can the person exercise access, rectification, objection and restriction?"
+        ],
+        "safeguards": [
+            "Data minimisation",
+            "Purpose limitation",
+            "Retention limits",
+            "Clear information notice",
+            "Effective data subject rights"
         ]
     },
     {
-        "id": "R2",
-        "name": "Discriminazione diretta, indiretta o tramite proxy",
-        "rights": ["uguaglianza", "non discriminazione", "pari accesso a opportunità"],
+        "id": "FR2",
+        "risk": "Direct, indirect or proxy discrimination",
+        "rights": [
+            "Equality",
+            "Non-discrimination",
+            "Equal access to opportunities"
+        ],
         "triggers": {
             "contexts": [
-                "Lavoro/HR",
-                "Istruzione",
-                "Credito/assicurazioni",
-                "Welfare/servizi pubblici",
-                "Sanità",
-                "Giustizia/polizia/migrazione"
+                "Employment/HR",
+                "Education",
+                "Credit/insurance",
+                "Welfare/public services",
+                "Healthcare",
+                "Justice/policing/migration"
             ],
             "actions": [
                 "Scoring/ranking",
-                "Classificazione",
-                "Esclusione/de-prioritizzazione",
-                "Predizione rischio/affidabilità"
+                "Classification",
+                "Exclusion/de-prioritisation",
+                "Risk prediction"
             ],
             "data_categories": [
-                "Dati particolari art. 9 GDPR",
-                "Dati biometrici",
+                "Special categories of data",
+                "Biometric data",
                 "Proxy variables",
-                "Dati inferiti/profilazione"
+                "Inferred/profiling data"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "Sono presenti variabili protette o variabili proxy?",
-            "Il modello è stato testato per sottogruppi?",
-            "I dati storici incorporano disuguaglianze pregresse?",
-            "L'impatto varia per genere, età, origine, disabilità, territorio o status socio-economico?"
+        "mechanisms": [
+            "Historical bias",
+            "Proxy variables",
+            "Unequal error rates",
+            "Under-representation of groups",
+            "Disparate impact"
         ],
-        "measures": [
-            "bias testing",
-            "analisi per sottogruppi",
-            "audit indipendente",
-            "rimozione o controllo delle proxy variables",
-            "revisione umana effettiva"
+        "questions": [
+            "Are protected attributes or proxy variables used?",
+            "Has the system been tested across affected groups?",
+            "Do historical data reproduce previous inequalities?",
+            "Does impact vary by gender, age, ethnic origin, disability, territory or socio-economic status?"
+        ],
+        "safeguards": [
+            "Bias testing",
+            "Subgroup analysis",
+            "Independent audit",
+            "Control of proxy variables",
+            "Effective human review"
         ]
     },
     {
-        "id": "R3",
-        "name": "Opacità decisionale e spiegazione insufficiente",
-        "rights": ["trasparenza", "rimedio effettivo", "diritto di difesa", "buona amministrazione"],
+        "id": "FR3",
+        "risk": "Decision-making opacity and insufficient explanation",
+        "rights": [
+            "Transparency",
+            "Effective remedy",
+            "Defence rights",
+            "Good administration"
+        ],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
-                "Classificazione",
-                "Raccomandazione",
-                "Predizione rischio/affidabilità",
-                "Esclusione/de-prioritizzazione"
+                "Classification",
+                "Recommendation",
+                "Risk prediction",
+                "Exclusion/de-prioritisation"
             ],
             "decision_effects": [
-                "Effetti giuridici o similmente significativi",
-                "Esclusione/accesso/priorità in servizi o opportunità"
+                "Legal or similarly significant effect",
+                "Access/exclusion/priority in services or opportunities"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "La persona sa che il sistema è usato?",
-            "La logica essenziale della decisione è spiegabile in linguaggio comprensibile?",
-            "La persona può conoscere i criteri rilevanti?",
-            "La spiegazione consente una contestazione concreta?"
+        "mechanisms": [
+            "Opaque criteria",
+            "Unexplained score",
+            "Unclear role of automation",
+            "Inability to understand the reason for the outcome"
         ],
-        "measures": [
-            "notice individuale",
-            "spiegazione comprensibile",
-            "documentazione dei criteri decisionali",
-            "canale di contestazione",
-            "logging della decisione"
+        "questions": [
+            "Does the person know that the system is used?",
+            "Can the essential logic be explained in understandable terms?",
+            "Can the person know the relevant criteria?",
+            "Does the explanation enable concrete contestation?"
+        ],
+        "safeguards": [
+            "Individual notice",
+            "Understandable explanation",
+            "Documentation of decision criteria",
+            "Appeal channel",
+            "Decision logging"
         ]
     },
     {
-        "id": "R4",
-        "name": "Human oversight ineffettivo o meramente formale",
-        "rights": ["accountability", "rimedio effettivo", "due process", "buona amministrazione"],
+        "id": "FR4",
+        "risk": "Ineffective or merely formal human oversight",
+        "rights": [
+            "Accountability",
+            "Effective remedy",
+            "Due process",
+            "Good administration"
+        ],
         "triggers": {
             "actions": [
-                "Raccomandazione",
+                "Recommendation",
                 "Scoring/ranking",
-                "Predizione rischio/affidabilità",
-                "Esclusione/de-prioritizzazione"
+                "Risk prediction",
+                "Exclusion/de-prioritisation"
             ],
             "decision_effects": [
-                "Supporto a decisione umana",
-                "Effetti giuridici o similmente significativi",
-                "Esclusione/accesso/priorità in servizi o opportunità"
+                "Support to human decision",
+                "Legal or similarly significant effect",
+                "Access/exclusion/priority in services or opportunities"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "L'umano può realmente discostarsi dall'output del sistema?",
-            "Il revisore ha tempo, competenza e autorità per modificare l'esito?",
-            "Sono prevenuti automation bias e rubber-stamping?",
-            "La revisione umana è documentata?"
+        "mechanisms": [
+            "Automation bias",
+            "Rubber-stamping",
+            "Lack of authority to override",
+            "Lack of time or competence for review"
         ],
-        "measures": [
-            "formazione dei revisori",
-            "diritto di override",
-            "documentazione della revisione",
-            "procedure anti-automation bias",
-            "controllo periodico delle decisioni confermate"
+        "questions": [
+            "Can the human reviewer genuinely depart from the system output?",
+            "Does the reviewer have time, competence and authority?",
+            "Are automation bias and rubber-stamping prevented?",
+            "Is the human review documented?"
+        ],
+        "safeguards": [
+            "Reviewer training",
+            "Override right",
+            "Documented review",
+            "Anti-automation-bias procedure",
+            "Periodic control of confirmed decisions"
         ]
     },
     {
-        "id": "R5",
-        "name": "Esclusione da beni, servizi o opportunità essenziali",
-        "rights": ["accesso ai servizi", "uguaglianza sostanziale", "dignità", "rimedio effettivo"],
+        "id": "FR5",
+        "risk": "Exclusion from essential goods, services or opportunities",
+        "rights": [
+            "Access to services",
+            "Substantive equality",
+            "Dignity",
+            "Effective remedy"
+        ],
         "triggers": {
             "contexts": [
-                "Lavoro/HR",
-                "Istruzione",
-                "Credito/assicurazioni",
-                "Welfare/servizi pubblici",
-                "Sanità",
-                "Giustizia/polizia/migrazione"
+                "Employment/HR",
+                "Education",
+                "Credit/insurance",
+                "Welfare/public services",
+                "Healthcare",
+                "Justice/policing/migration"
             ],
             "actions": [
-                "Esclusione/de-prioritizzazione",
+                "Exclusion/de-prioritisation",
                 "Scoring/ranking",
-                "Classificazione"
+                "Classification"
             ],
             "decision_effects": [
-                "Esclusione/accesso/priorità in servizi o opportunità",
-                "Effetti giuridici o similmente significativi"
+                "Access/exclusion/priority in services or opportunities",
+                "Legal or similarly significant effect"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "L'esito può impedire o limitare accesso a un servizio essenziale?",
-            "Esiste un canale alternativo non automatizzato?",
-            "L'errore è correggibile in tempo utile?",
-            "Il danno è reversibile?"
+        "mechanisms": [
+            "Denial of access",
+            "De-prioritisation",
+            "Loss of opportunity",
+            "Irreversible or time-sensitive harm"
         ],
-        "measures": [
-            "canale alternativo",
-            "revisione urgente",
-            "fallback umano",
-            "notifica dell'esito",
-            "procedura di rimedio"
+        "questions": [
+            "Can the output restrict access to an essential service or opportunity?",
+            "Is there a non-automated alternative channel?",
+            "Can an error be corrected in due time?",
+            "Is the harm reversible?"
+        ],
+        "safeguards": [
+            "Alternative channel",
+            "Urgent review",
+            "Human fallback",
+            "Outcome notification",
+            "Remedy procedure"
         ]
     },
     {
-        "id": "R6",
-        "name": "Sorveglianza sproporzionata e chilling effect",
-        "rights": ["privacy", "libertà personale", "libertà di espressione", "libertà di associazione", "dignità"],
+        "id": "FR6",
+        "risk": "Disproportionate surveillance and chilling effect",
+        "rights": [
+            "Privacy",
+            "Personal liberty",
+            "Freedom of expression",
+            "Freedom of association",
+            "Dignity"
+        ],
         "triggers": {
             "actions": [
-                "Monitoraggio/sorveglianza",
-                "Verifica identità/biometria",
-                "Moderazione/ordinamento contenuti"
+                "Monitoring/surveillance",
+                "Identity verification/biometrics",
+                "Content moderation/ranking"
             ],
             "data_categories": [
-                "Dati biometrici",
-                "Dati comportamentali",
-                "Dati da fonti multiple",
-                "Dati inferiti/profilazione"
+                "Biometric data",
+                "Behavioural data",
+                "Data from multiple sources",
+                "Inferred/profiling data"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "Il monitoraggio è continuo o sistematico?",
-            "Le persone possono modificare il proprio comportamento per timore di osservazione?",
-            "La misura è strettamente necessaria?",
-            "Sono presenti limiti temporali e funzionali?"
+        "mechanisms": [
+            "Continuous observation",
+            "Behavioural adaptation due to being monitored",
+            "Excessive identification",
+            "Function creep"
         ],
-        "measures": [
-            "limitazione temporale",
-            "limitazione della finalità",
-            "riduzione granularità dati",
-            "informativa rafforzata",
-            "audit sul monitoraggio"
+        "questions": [
+            "Is monitoring continuous or systematic?",
+            "May persons change behaviour because they feel observed?",
+            "Is the measure strictly necessary?",
+            "Are there temporal and functional limits?"
+        ],
+        "safeguards": [
+            "Temporal limitation",
+            "Purpose limitation",
+            "Reduced data granularity",
+            "Enhanced transparency",
+            "Monitoring audit"
         ]
     },
     {
-        "id": "R7",
-        "name": "Dignità, autonomia e stigmatizzazione",
-        "rights": ["dignità", "autonomia individuale", "reputazione", "libero sviluppo della persona"],
+        "id": "FR7",
+        "risk": "Dignity, autonomy and stigmatisation",
+        "rights": [
+            "Dignity",
+            "Individual autonomy",
+            "Reputation",
+            "Free development of personality"
+        ],
         "triggers": {
             "actions": [
-                "Predizione rischio/affidabilità",
+                "Risk prediction",
                 "Scoring/ranking",
-                "Classificazione",
-                "Monitoraggio/sorveglianza"
-            ],
-            "contexts": [
-                "Lavoro/HR",
-                "Istruzione",
-                "Sanità",
-                "Welfare/servizi pubblici",
-                "Giustizia/polizia/migrazione"
+                "Classification",
+                "Monitoring/surveillance"
             ],
             "data_categories": [
-                "Dati inferiti/profilazione",
-                "Dati comportamentali",
-                "Dati biometrici"
+                "Inferred/profiling data",
+                "Behavioural data",
+                "Biometric data"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "La persona viene ridotta a punteggio, profilo o categoria?",
-            "Il sistema attribuisce affidabilità, rischio, produttività o valore sociale?",
-            "L'etichetta prodotta può generare stigma?",
-            "La persona può correggere o contestare la classificazione?"
+        "mechanisms": [
+            "Reduction of the person to a score",
+            "Stigmatising labels",
+            "Predictive categorisation",
+            "Loss of self-determination"
         ],
-        "measures": [
-            "limitazione delle categorie",
-            "divieto di etichette stigmatizzanti",
-            "spiegazione individuale",
-            "rettifica del profilo",
-            "revisione umana qualificata"
+        "questions": [
+            "Is the person reduced to a score, profile or category?",
+            "Does the system assign reliability, risk, productivity or social value?",
+            "Can the label generate stigma?",
+            "Can the person correct or contest the classification?"
+        ],
+        "safeguards": [
+            "Limit categories",
+            "Avoid stigmatising labels",
+            "Individual explanation",
+            "Profile correction",
+            "Qualified human review"
         ]
     },
     {
-        "id": "R8",
-        "name": "Libertà di espressione, informazione e pluralismo",
-        "rights": ["libertà di espressione", "libertà di informazione", "pluralismo", "contestabilità"],
+        "id": "FR8",
+        "risk": "Freedom of expression, information and pluralism",
+        "rights": [
+            "Freedom of expression",
+            "Freedom of information",
+            "Pluralism",
+            "Contestability"
+        ],
         "triggers": {
             "contexts": [
-                "Piattaforme/contenuti"
+                "Platforms/content"
             ],
             "actions": [
-                "Moderazione/ordinamento contenuti",
-                "Raccomandazione",
-                "Esclusione/de-prioritizzazione",
-                "Generazione contenuti"
+                "Content moderation/ranking",
+                "Recommendation",
+                "Exclusion/de-prioritisation",
+                "Content generation"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "Il sistema rimuove, de-prioritizza o ordina contenuti?",
-            "Può produrre over-removal o under-removal?",
-            "Incide sulla visibilità di gruppi, opinioni o informazioni?",
-            "Esiste un reclamo effettivo e tempestivo?"
+        "mechanisms": [
+            "Over-removal",
+            "Under-removal",
+            "Opacity of ranking",
+            "Distortion of visibility",
+            "Chilling effect"
         ],
-        "measures": [
-            "criteri di ranking/moderazione trasparenti",
-            "notice agli utenti",
-            "appeal",
-            "audit su over-removal e under-removal",
-            "monitoraggio degli effetti sistemici"
+        "questions": [
+            "Does the system remove, downrank or order content?",
+            "Can it produce over-removal or under-removal?",
+            "Does it affect the visibility of groups, opinions or information?",
+            "Is there an effective and timely appeal?"
+        ],
+        "safeguards": [
+            "Transparent ranking/moderation criteria",
+            "User notice",
+            "Appeal",
+            "Audit of over-removal and under-removal",
+            "Monitoring of systemic effects"
         ]
     },
     {
-        "id": "R9",
-        "name": "Accountability gap e allocazione incerta delle responsabilità",
-        "rights": ["accountability", "rimedio effettivo", "effettività della tutela"],
+        "id": "FR9",
+        "risk": "Accountability gap and unclear allocation of responsibilities",
+        "rights": [
+            "Accountability",
+            "Effective remedy",
+            "Effective protection of rights"
+        ],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
-                "Classificazione",
-                "Raccomandazione",
-                "Predizione rischio/affidabilità",
-                "Generazione contenuti",
-                "Altro"
-            ],
-            "decision_effects": [
-                "Supporto a decisione umana",
-                "Effetti giuridici o similmente significativi",
-                "Esclusione/accesso/priorità in servizi o opportunità"
+                "Classification",
+                "Recommendation",
+                "Risk prediction",
+                "Content generation",
+                "Other"
             ]
         },
-        "baseline": "medio",
-        "questions": [
-            "È chiaro chi decide?",
-            "È chiaro chi controlla?",
-            "È chiaro chi risponde in caso di errore o danno?",
-            "Provider, deployer, controller, processor e responsabili interni sono distinti?"
+        "mechanisms": [
+            "Unclear role allocation",
+            "Responsibility shifting",
+            "Lack of internal owner",
+            "Fragmented provider-deployer-controller responsibilities"
         ],
-        "measures": [
-            "accountability matrix",
-            "nomina responsabili interni",
-            "logging",
-            "audit trail",
-            "procedure di escalation"
+        "questions": [
+            "Is it clear who decides?",
+            "Is it clear who controls?",
+            "Is it clear who is responsible for error or harm?",
+            "Are provider, deployer, controller, processor and internal owners distinguished?"
+        ],
+        "safeguards": [
+            "Accountability matrix",
+            "Internal owners",
+            "Logging",
+            "Audit trail",
+            "Escalation procedure"
         ]
     },
     {
-        "id": "R10",
-        "name": "Rimedio ineffettivo o impossibilità di contestazione",
-        "rights": ["rimedio effettivo", "due process", "diritto di difesa", "buona amministrazione"],
+        "id": "FR10",
+        "risk": "Ineffective remedy or impossibility of contestation",
+        "rights": [
+            "Effective remedy",
+            "Due process",
+            "Defence rights",
+            "Good administration"
+        ],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
-                "Classificazione",
-                "Esclusione/de-prioritizzazione",
-                "Predizione rischio/affidabilità",
-                "Moderazione/ordinamento contenuti"
+                "Classification",
+                "Exclusion/de-prioritisation",
+                "Risk prediction",
+                "Content moderation/ranking"
             ],
             "decision_effects": [
-                "Effetti giuridici o similmente significativi",
-                "Esclusione/accesso/priorità in servizi o opportunità"
+                "Legal or similarly significant effect",
+                "Access/exclusion/priority in services or opportunities"
             ]
         },
-        "baseline": "alto",
-        "questions": [
-            "La persona può contestare l'esito?",
-            "Il reclamo è semplice, accessibile e tempestivo?",
-            "La contestazione può modificare concretamente l'esito?",
-            "Sono previsti tempi certi di risposta?"
+        "mechanisms": [
+            "No complaint channel",
+            "Complaint without effect",
+            "No human review",
+            "No reasons given",
+            "Excessive burden on affected person"
         ],
-        "measures": [
-            "complaint mechanism",
-            "canale umano",
-            "tempi di risposta",
-            "motivazione dell'esito",
-            "possibilità di revisione"
+        "questions": [
+            "Can the person contest the outcome?",
+            "Is the complaint channel simple, accessible and timely?",
+            "Can contestation concretely change the outcome?",
+            "Are response deadlines defined?"
+        ],
+        "safeguards": [
+            "Complaint mechanism",
+            "Human channel",
+            "Response deadlines",
+            "Reasoned outcome",
+            "Possibility of review"
         ]
     }
 ]
 
 
 # ---------------------------------------------------------------------
-# 3. FUNZIONI DI VALUTAZIONE
+# FUNCTIONS
 # ---------------------------------------------------------------------
 
-def list_intersection(a, b):
-    return sorted(list(set(a).intersection(set(b))))
+def has_intersection(values, triggers):
+    return bool(set(values).intersection(set(triggers)))
 
 
-def activate_risks(inputs):
+def is_provider_role(inputs):
+    return (
+        "Provider" in inputs["filer_role"]
+        or "Joint assessment team" in inputs["filer_role"]
+    )
+
+
+def is_deployer_role(inputs):
+    return (
+        "Deployer" in inputs["filer_role"]
+        or "Joint assessment team" in inputs["filer_role"]
+    )
+
+
+def activate_fundamental_rights_risks(inputs):
     activated = []
 
-    for risk in RISK_CATALOG:
+    for item in RISK_CATALOG:
         matched = []
+        triggers = item["triggers"]
 
-        for trigger_key, trigger_values in risk["triggers"].items():
-            input_values = inputs.get(trigger_key, [])
-            hits = list_intersection(trigger_values, input_values)
-            matched.extend(hits)
+        if "contexts" in triggers and has_intersection(inputs["contexts"], triggers["contexts"]):
+            matched.append("deployment context")
+
+        if "actions" in triggers and has_intersection(inputs["actions"], triggers["actions"]):
+            matched.append("system action")
+
+        if "data_categories" in triggers and has_intersection(inputs["data_categories"], triggers["data_categories"]):
+            matched.append("data category")
+
+        if "decision_effects" in triggers and inputs["decision_effect"] in triggers["decision_effects"]:
+            matched.append("effect on persons or opportunities")
 
         if matched:
             activated.append({
-                "id": risk["id"],
-                "name": risk["name"],
-                "rights": risk["rights"],
-                "baseline": risk["baseline"],
-                "trigger_match": sorted(list(set(matched))),
-                "questions": risk["questions"],
-                "measures": risk["measures"]
+                "ID": item["id"],
+                "Fundamental rights risk": item["risk"],
+                "Rights involved": "; ".join(item["rights"]),
+                "Legal mechanisms of harm": "; ".join(item["mechanisms"]),
+                "Triggered by": ", ".join(matched),
+                "Questions for legal analysis": " | ".join(item["questions"]),
+                "Safeguards to test": " | ".join(item["safeguards"])
             })
 
     return activated
 
 
-def compute_red_flags(inputs, activated_risks):
+def compute_red_flags(inputs, risks):
     flags = []
-    risk_ids = {r["id"] for r in activated_risks}
+    risk_ids = {risk["ID"] for risk in risks}
+
+    significant_decision = inputs["decision_effect"] in [
+        "Legal or similarly significant effect",
+        "Access/exclusion/priority in services or opportunities"
+    ]
 
     sensitive_data = {
-        "Dati particolari art. 9 GDPR",
-        "Dati biometrici",
-        "Dati di minori"
-    }.intersection(set(inputs["data_categories"]))
+        "Special categories of data",
+        "Biometric data",
+        "Children's data"
+    }
 
     if not inputs["purpose"].strip():
-        flags.append({
-            "severity": "blocking",
-            "label": "Finalità non descritta",
-            "explanation": "La finalità deve essere specifica, esplicita e sufficientemente determinata."
-        })
+        flags.append(("BLOCKING", "Purpose is missing or insufficiently specified."))
 
-    if inputs["legal_basis"] in ["Da definire", "Non applicabile / da verificare"]:
-        flags.append({
-            "severity": "blocking",
-            "label": "Base giuridica non definita",
-            "explanation": "La DPIA+ non può concludersi positivamente senza una base giuridica chiara."
-        })
+    if inputs["legal_basis"] in ["To be determined", "Not applicable / to be verified"]:
+        flags.append(("BLOCKING", "Legal basis is not clearly identified."))
 
-    if sensitive_data and inputs["data_strictly_necessary"] != "Sì":
-        flags.append({
-            "severity": "high",
-            "label": "Dati sensibili o vulnerabili senza necessità stringente",
-            "explanation": "Dati particolari, biometrici o di minori richiedono una giustificazione rafforzata."
-        })
+    if set(inputs["data_categories"]).intersection(sensitive_data) and inputs["data_necessary"] != "Yes":
+        flags.append((
+            "HIGH",
+            "Sensitive, biometric or children's data are used without a strict necessity justification."
+        ))
 
-    if inputs["alternatives_assessed"] == "No":
-        flags.append({
-            "severity": "high",
-            "label": "Alternative meno intrusive non valutate",
-            "explanation": "La necessità non è dimostrata se non sono state considerate alternative meno invasive."
-        })
+    if inputs["alternatives_assessed"] in ["No", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "Less intrusive alternatives have not been sufficiently assessed."
+        ))
 
-    if inputs["decision_effect"] in [
-        "Effetti giuridici o similmente significativi",
-        "Esclusione/accesso/priorità in servizi o opportunità"
-    ] and inputs["contestability"] != "Sì":
-        flags.append({
-            "severity": "blocking",
-            "label": "Decisione significativa senza contestabilità effettiva",
-            "explanation": "Una decisione con effetti significativi richiede un rimedio effettivo e accessibile."
-        })
+    if significant_decision and inputs["contestability"] != "Yes":
+        flags.append((
+            "BLOCKING",
+            "Affected persons cannot effectively contest a significant outcome."
+        ))
 
-    if inputs["decision_effect"] in [
-        "Effetti giuridici o similmente significativi",
-        "Esclusione/accesso/priorità in servizi o opportunità"
-    ] and inputs["human_oversight"] in ["Assente", "Solo formale"]:
-        flags.append({
-            "severity": "high",
-            "label": "Human oversight assente o meramente formale",
-            "explanation": "Il controllo umano deve poter comprendere, contestare e modificare l'output del sistema."
-        })
+    if significant_decision and inputs["remedy_effectiveness"] in ["No", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "The remedy is not shown to be capable of changing the outcome."
+        ))
 
-    if "R2" in risk_ids and inputs["subgroup_testing"] != "Sì":
-        flags.append({
-            "severity": "high",
-            "label": "Rischio discriminatorio senza test per sottogruppi",
-            "explanation": "Il rischio di discriminazione non può essere mitigato senza verifiche su gruppi potenzialmente colpiti."
-        })
-
-    if inputs["monitoring"] != "Sì":
-        flags.append({
-            "severity": "medium",
-            "label": "Monitoraggio post-deployment insufficiente",
-            "explanation": "Il risk management deve proseguire dopo il deployment, specialmente nei casi ad alto rischio."
-        })
+    if significant_decision and inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "Human oversight is absent, merely formal or insufficiently demonstrated in a significant decision-making context."
+        ))
 
     if not inputs["accountability_owner"].strip():
-        flags.append({
-            "severity": "high",
-            "label": "Responsabilità non allocata",
-            "explanation": "Serve un owner interno responsabile dell'assessment, delle misure e del riesame."
-        })
+        flags.append((
+            "HIGH",
+            "Internal accountability owner is missing."
+        ))
+
+    if "FR2" in risk_ids and inputs["bias_control"] in ["No", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "Discrimination risk is present, but bias/proxy-control safeguards are not sufficiently demonstrated."
+        ))
+
+    if "FR10" in risk_ids and inputs["remedy_effectiveness"] != "Yes":
+        flags.append((
+            "HIGH",
+            "A remedy risk is present, but remedy effectiveness is not demonstrated."
+        ))
+
+    if "FR5" in risk_ids and inputs["fallback_channel"] in ["No", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "Potential exclusion from services or opportunities is present without a reliable fallback channel."
+        ))
+
+    if is_provider_role(inputs):
+        if "FR2" in risk_ids and inputs["subgroup_testing"] != "Yes":
+            flags.append((
+                "HIGH",
+                "Provider-side add-on: discrimination risk without subgroup testing."
+            ))
+
+        if inputs["residual_risk_defined"] != "Yes":
+            flags.append((
+                "MEDIUM",
+                "Provider-side add-on: residual risk is not clearly defined and documented."
+            ))
+
+        if inputs["misuse_assessed"] in ["No", "To be verified"]:
+            flags.append((
+                "MEDIUM",
+                "Provider-side add-on: reasonably foreseeable misuse is not sufficiently assessed."
+            ))
+
+    if is_deployer_role(inputs):
+        if inputs["affected_categories_described"] != "Yes":
+            flags.append((
+                "HIGH",
+                "Deployer-side add-on: affected persons and groups are not sufficiently described in the deployment context."
+            ))
+
+        if inputs["monitoring"] != "Yes":
+            flags.append((
+                "MEDIUM",
+                "Deployer-side add-on: post-deployment monitoring is not clearly established."
+            ))
 
     return flags
 
 
-def compute_scrutiny_level(inputs, flags):
-    level = 1
+def compute_scrutiny_level(inputs, flags, risks):
+    score = 0
 
     high_contexts = {
-        "Lavoro/HR",
-        "Istruzione",
-        "Credito/assicurazioni",
-        "Welfare/servizi pubblici",
-        "Sanità"
+        "Employment/HR",
+        "Education",
+        "Credit/insurance",
+        "Welfare/public services",
+        "Healthcare"
     }
 
     very_high_contexts = {
-        "Giustizia/polizia/migrazione"
+        "Justice/policing/migration"
     }
 
     vulnerable_groups = {
-        "Minori",
-        "Migranti/richiedenti asilo",
-        "Persone con disabilità",
-        "Gruppi protetti o vulnerabili",
-        "Beneficiari welfare",
-        "Pazienti"
+        "Children",
+        "Migrants/asylum seekers",
+        "Persons with disabilities",
+        "Protected or vulnerable groups",
+        "Welfare beneficiaries",
+        "Patients"
     }
 
     sensitive_data = {
-        "Dati particolari art. 9 GDPR",
-        "Dati biometrici",
-        "Dati di minori"
+        "Special categories of data",
+        "Biometric data",
+        "Children's data"
     }
 
-    if high_contexts.intersection(set(inputs["contexts"])):
-        level = max(level, 3)
+    if set(inputs["contexts"]).intersection(high_contexts):
+        score += 2
 
-    if very_high_contexts.intersection(set(inputs["contexts"])):
-        level = max(level, 4)
+    if set(inputs["contexts"]).intersection(very_high_contexts):
+        score += 3
 
-    if vulnerable_groups.intersection(set(inputs["groups"])):
-        level = max(level, 4)
+    if set(inputs["groups"]).intersection(vulnerable_groups):
+        score += 3
 
-    if sensitive_data.intersection(set(inputs["data_categories"])):
-        level = max(level, 4)
+    if set(inputs["data_categories"]).intersection(sensitive_data):
+        score += 3
 
     if inputs["decision_effect"] in [
-        "Effetti giuridici o similmente significativi",
-        "Esclusione/accesso/priorità in servizi o opportunità"
+        "Legal or similarly significant effect",
+        "Access/exclusion/priority in services or opportunities"
     ]:
-        level = max(level, 3)
+        score += 3
 
-    if any(flag["severity"] == "blocking" for flag in flags):
-        level = max(level, 4)
+    if len(risks) >= 5:
+        score += 2
 
-    mapping = {
-        1: "basso",
-        2: "medio",
-        3: "alto",
-        4: "molto alto"
-    }
+    if any(level == "BLOCKING" for level, _ in flags):
+        score += 4
 
-    return mapping[level]
+    if score >= 9:
+        return "Very high"
 
+    if score >= 6:
+        return "High"
 
-def recommend_outcome(scrutiny_level, flags):
-    if any(flag["severity"] == "blocking" for flag in flags):
-        return "NO-GO temporaneo / redesign obbligatorio"
+    if score >= 3:
+        return "Medium"
 
-    if any(flag["severity"] == "high" for flag in flags):
-        return "CONDITIONAL GO con misure obbligatorie ed escalation"
-
-    if scrutiny_level in ["alto", "molto alto"]:
-        return "CONDITIONAL GO / enhanced review"
-
-    return "GO con monitoraggio periodico"
+    return "Low"
 
 
-def build_risk_dataframe(activated_risks):
-    rows = []
+def compute_outcome(flags, scrutiny_level):
+    levels = [level for level, _ in flags]
 
-    for risk in activated_risks:
-        rows.append({
-            "ID": risk["id"],
-            "Rischio": risk["name"],
-            "Diritti coinvolti": ", ".join(risk["rights"]),
-            "Trigger rilevati": ", ".join(risk["trigger_match"]),
-            "Baseline": risk["baseline"],
-            "Domande obbligatorie": " | ".join(risk["questions"]),
-            "Misure minime": " | ".join(risk["measures"])
-        })
+    if "BLOCKING" in levels:
+        return "NO-GO / redesign required before deployment"
 
-    return pd.DataFrame(rows)
+    if "HIGH" in levels:
+        return "CONDITIONAL GO with mandatory safeguards and escalation"
+
+    if scrutiny_level in ["High", "Very high"]:
+        return "CONDITIONAL GO / enhanced human-rights review"
+
+    if "MEDIUM" in levels:
+        return "GO with documented review and monitoring"
+
+    return "GO"
 
 
-def build_markdown_report(inputs, activated_risks, flags, scrutiny_level, outcome):
-    lines = []
+def build_report(inputs, risks, flags, scrutiny_level, outcome):
+    is_provider = is_provider_role(inputs)
+    is_deployer = is_deployer_role(inputs)
 
-    lines.append("# DPIA+ / FRIA Legal Risk Selection Report")
-    lines.append("")
-    lines.append(f"**Data generazione:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    lines.append("")
-    lines.append("## 1. Identificazione del progetto")
-    lines.append(f"- **Nome progetto:** {inputs['project_name']}")
-    lines.append(f"- **Organizzazione:** {inputs['organization']}")
-    lines.append(f"- **Owner accountability:** {inputs['accountability_owner']}")
-    lines.append("")
+    report = []
 
-    lines.append("## 2. DPIA core")
-    lines.append(f"- **Finalità:** {inputs['purpose']}")
-    lines.append(f"- **Base giuridica:** {inputs['legal_basis']}")
-    lines.append(f"- **Categorie di dati:** {', '.join(inputs['data_categories'])}")
-    lines.append(f"- **Dati strettamente necessari:** {inputs['data_strictly_necessary']}")
-    lines.append("")
+    report.append("# DPIA-based Fundamental Rights Assessment Report")
+    report.append("")
+    report.append(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    report.append("")
 
-    lines.append("## 3. AI system / decision-making layer")
-    lines.append(f"- **Contesto d'uso:** {', '.join(inputs['contexts'])}")
-    lines.append(f"- **Azione del sistema:** {', '.join(inputs['actions'])}")
-    lines.append(f"- **Effetto della decisione:** {inputs['decision_effect']}")
-    lines.append(f"- **Gruppi coinvolti:** {', '.join(inputs['groups'])}")
-    lines.append("")
+    report.append("## 1. Assessment scope")
+    report.append(f"- Project name: {inputs['project_name']}")
+    report.append(f"- Organisation: {inputs['organisation']}")
+    report.append(f"- Who is completing the assessment: {', '.join(inputs['filer_role'])}")
+    report.append(f"- Accountability owner: {inputs['accountability_owner']}")
+    report.append("")
 
-    lines.append("## 4. Necessità")
-    lines.append(f"- **Alternative meno intrusive valutate:** {inputs['alternatives_assessed']}")
-    lines.append(f"- **Motivazione di necessità:** {inputs['necessity_reasoning']}")
-    lines.append("")
+    report.append("## 2. DPIA baseline")
+    report.append(f"- Purpose: {inputs['purpose']}")
+    report.append(f"- Legal basis: {inputs['legal_basis']}")
+    report.append(f"- Data categories: {', '.join(inputs['data_categories'])}")
+    report.append(f"- Data strictly necessary: {inputs['data_necessary']}")
+    report.append("")
 
-    lines.append("## 5. Proporzionalità")
-    lines.append(f"- **Motivazione di proporzionalità:** {inputs['proportionality_reasoning']}")
-    lines.append(f"- **Contestabilità:** {inputs['contestability']}")
-    lines.append(f"- **Human oversight:** {inputs['human_oversight']}")
-    lines.append("")
+    report.append("## 3. Decision-making context")
+    report.append(f"- Deployment context: {', '.join(inputs['contexts'])}")
+    report.append(f"- System action: {', '.join(inputs['actions'])}")
+    report.append(f"- Effect on persons, groups or opportunities: {inputs['decision_effect']}")
+    report.append(f"- Affected persons or groups: {', '.join(inputs['groups'])}")
+    report.append("")
 
-    lines.append("## 6. Art. 9 AI Act — Risk management")
-    lines.append(f"- **Test per sottogruppi:** {inputs['subgroup_testing']}")
-    lines.append(f"- **Monitoraggio post-deployment:** {inputs['monitoring']}")
-    lines.append(f"- **Reasonably foreseeable misuse considerato:** {inputs['misuse_assessed']}")
-    lines.append("")
+    report.append("## 4. Necessity and proportionality")
+    report.append(f"- Less intrusive alternatives assessed: {inputs['alternatives_assessed']}")
+    report.append(f"- Necessity reasoning: {inputs['necessity_reasoning']}")
+    report.append(f"- Proportionality reasoning: {inputs['proportionality_reasoning']}")
+    report.append("")
 
-    lines.append("## 7. Art. 27 AI Act — FRIA deployment layer")
-    lines.append(f"- **Complaint mechanism:** {inputs['contestability']}")
-    lines.append(f"- **Categorie di persone/gruppi colpiti:** {', '.join(inputs['groups'])}")
-    lines.append(f"- **Governance interna:** {inputs['governance_notes']}")
-    lines.append("")
+    report.append("## 5. Fundamental rights safeguards")
+    report.append(f"- Human oversight: {inputs['human_oversight']}")
+    report.append(f"- Contestability: {inputs['contestability']}")
+    report.append(f"- Remedy effectiveness: {inputs['remedy_effectiveness']}")
+    report.append(f"- Fallback channel: {inputs['fallback_channel']}")
+    report.append(f"- Bias/proxy-control safeguards: {inputs['bias_control']}")
+    report.append(f"- Affected groups consulted: {inputs['affected_groups_consulted']}")
+    report.append(f"- Governance notes: {inputs['governance_notes']}")
+    report.append("")
 
-    lines.append("## 8. Rischi fondamentali attivati")
-    if not activated_risks:
-        lines.append("Nessun rischio attivato automaticamente. Verificare manualmente.")
+    if is_provider:
+        report.append("## 6A. Provider-side add-on")
+        report.append(f"- Reasonably foreseeable misuse assessed: {inputs['misuse_assessed']}")
+        report.append(f"- Subgroup testing: {inputs['subgroup_testing']}")
+        report.append(f"- Residual risk defined and documented: {inputs['residual_risk_defined']}")
+        report.append("")
+
+    if is_deployer:
+        report.append("## 6B. Deployer-side add-on")
+        report.append(f"- Expected frequency of use: {inputs['deployment_frequency']}")
+        report.append(f"- Affected categories described: {inputs['affected_categories_described']}")
+        report.append(f"- Post-deployment monitoring: {inputs['monitoring']}")
+        report.append("")
+
+    report.append("## 7. Fundamental rights risks selected")
+
+    if not risks:
+        report.append("No risk automatically activated. Manual legal review is required.")
+        report.append("")
     else:
-        for risk in activated_risks:
-            lines.append(f"### {risk['id']} — {risk['name']}")
-            lines.append(f"- **Diritti coinvolti:** {', '.join(risk['rights'])}")
-            lines.append(f"- **Trigger:** {', '.join(risk['trigger_match'])}")
-            lines.append(f"- **Baseline:** {risk['baseline']}")
-            lines.append("- **Domande obbligatorie:**")
-            for q in risk["questions"]:
-                lines.append(f"  - {q}")
-            lines.append("- **Misure minime:**")
-            for m in risk["measures"]:
-                lines.append(f"  - {m}")
-            lines.append("")
+        for risk in risks:
+            report.append(f"### {risk['ID']} - {risk['Fundamental rights risk']}")
+            report.append(f"- Rights involved: {risk['Rights involved']}")
+            report.append(f"- Legal mechanisms of harm: {risk['Legal mechanisms of harm']}")
+            report.append(f"- Triggered by: {risk['Triggered by']}")
+            report.append(f"- Questions for legal analysis: {risk['Questions for legal analysis']}")
+            report.append(f"- Safeguards to test: {risk['Safeguards to test']}")
+            report.append("")
 
-    lines.append("## 9. Red flags")
+    report.append("## 8. Red flags")
     if not flags:
-        lines.append("Nessuna red flag automatica rilevata.")
+        report.append("No red flags detected.")
     else:
-        for flag in flags:
-            lines.append(f"- **[{flag['severity'].upper()}] {flag['label']}**: {flag['explanation']}")
-    lines.append("")
+        for level, message in flags:
+            report.append(f"- [{level}] {message}")
+    report.append("")
 
-    lines.append("## 10. Esito")
-    lines.append(f"- **Livello di scrutinio:** {scrutiny_level}")
-    lines.append(f"- **Esito raccomandato:** {outcome}")
-    lines.append("")
-    lines.append("## 11. Nota metodologica")
-    lines.append(
-        "Questo report non sostituisce la valutazione giuridica umana. "
-        "Il tool automatizza la selezione preliminare dei rischi, la tracciabilità "
-        "del ragionamento e l'individuazione delle red flags."
+    report.append("## 9. Scrutiny and recommended outcome")
+    report.append(f"- Scrutiny level: {scrutiny_level}")
+    report.append(f"- Recommended outcome: {outcome}")
+    report.append("")
+
+    report.append("## Methodological note")
+    report.append(
+        "This tool does not automate constitutional judgment. "
+        "It automates the procedural conditions for better fundamental-rights reasoning: "
+        "completeness, consistency, traceability, contestability and accountability. "
+        "Provider-side and deployer-side regulatory modules are opened only when relevant to the role of the filer."
     )
 
-    return "\n".join(lines)
+    return "\n".join(report)
 
 
 # ---------------------------------------------------------------------
-# 4. STATO SESSIONE
+# UI
 # ---------------------------------------------------------------------
 
-if "last_result" not in st.session_state:
-    st.session_state.last_result = None
-
-
-# ---------------------------------------------------------------------
-# 5. INTERFACCIA
-# ---------------------------------------------------------------------
-
-st.title("DPIA+ / FRIA Legal Risk Selection Tool")
-st.caption(
-    "Prototipo Streamlit per integrare DPIA, art. 9 AI Act e art. 27 AI Act "
-    "attraverso un legal risk selection layer."
-)
-
-with st.expander("Logica del tool", expanded=False):
+with st.expander("Methodological logic", expanded=False):
     st.markdown(
         """
-        Il tool usa la DPIA come base procedurale e aggiunge tre livelli:
+        This tool uses the **DPIA as the procedural baseline** and adds a deeper
+        **fundamental-rights risk selection layer**.
 
-        1. **Legal risk selection**: seleziona i rischi fondamentali sulla base di contesto, dati, azione del sistema e tipo di decisione.
-        2. **Art. 9 AI Act**: introduce risk management, testing, rischio residuo e monitoraggio.
-        3. **Art. 27 AI Act**: introduce contesto di deployment, gruppi colpiti, human oversight, governance e reclami.
+        The assessment is structured around:
+        - the decision-making context;
+        - the persons and groups affected;
+        - the legal mechanisms through which harm may occur;
+        - necessity and proportionality;
+        - safeguards, remedies and contestability.
 
-        Il tool non decide la conformità finale. Guida l'analista e produce un report tracciabile.
+        **Provider-side questions** are shown only when the filer is a provider
+        or a joint assessment team.
+
+        **Deployer-side questions** are shown only when the filer is a deployer
+        or a joint assessment team.
         """
     )
 
-st.divider()
-
-with st.form("dpia_fria_form"):
-    st.subheader("1. Identificazione")
+with st.form("assessment_form"):
+    st.header("1. Assessment scope")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        project_name = st.text_input("Nome progetto / sistema", value="Recruitment AI Pilot")
-        organization = st.text_input("Organizzazione", value="Example Organization")
-        accountability_owner = st.text_input("Owner accountability", value="DPO / AI Governance Officer")
-
-    with col2:
-        legal_basis = st.selectbox("Base giuridica", LEGAL_BASES, index=0)
-        decision_effect = st.selectbox("Effetto della decisione", DECISION_EFFECTS, index=1)
-        data_strictly_necessary = st.selectbox(
-            "I dati sono strettamente necessari?",
-            ["Sì", "No", "Parziale", "Da verificare"],
-            index=3
+        project_name = st.text_input("Project name", "Recruitment AI Pilot")
+        organisation = st.text_input("Organisation", "Example organisation")
+        filer_role = st.multiselect(
+            "Who is completing this assessment?",
+            FILER_ROLES,
+            default=["Controller / data protection team"]
         )
 
-    st.subheader("2. DPIA core")
+    with col2:
+        accountability_owner = st.text_input(
+            "Accountability owner",
+            "DPO / AI Governance Officer"
+        )
+        legal_basis = st.selectbox("Legal basis", LEGAL_BASES)
+        data_necessary = st.selectbox(
+            "Are data strictly necessary for the stated purpose?",
+            YES_NO_OPTIONS
+        )
+
+    st.header("2. DPIA baseline")
 
     purpose = st.text_area(
-        "Finalità del trattamento / uso del sistema",
-        value="",
-        height=90,
-        placeholder="Descrivere finalità specifica, contesto e risultato atteso."
+        "Purpose of the processing / AI use",
+        "",
+        placeholder="Describe the specific purpose, context and expected outcome."
     )
 
     data_categories = st.multiselect(
-        "Categorie di dati",
+        "Data categories",
         DATA_CATEGORIES,
-        default=["Dati personali comuni"]
+        default=["Common personal data"]
     )
 
-    st.subheader("3. AI system e contesto d'uso")
+    st.header("3. Decision-making context")
 
     col3, col4 = st.columns(2)
 
     with col3:
         contexts = st.multiselect(
-            "Contesto d'uso",
+            "Deployment context",
             CONTEXTS,
-            default=["Lavoro/HR"]
+            default=["Employment/HR"]
         )
 
         actions = st.multiselect(
-            "Azione del sistema",
+            "System action",
             ACTIONS,
             default=["Scoring/ranking"]
         )
 
     with col4:
+        decision_effect = st.selectbox(
+            "Effect on persons, groups or opportunities",
+            DECISION_EFFECTS
+        )
+
         groups = st.multiselect(
-            "Persone o gruppi potenzialmente coinvolti",
+            "Affected persons or groups",
             GROUPS,
-            default=["Lavoratori/candidati"]
+            default=["Workers/candidates"]
         )
 
-        misuse_assessed = st.selectbox(
-            "Reasonably foreseeable misuse valutato?",
-            ["Sì", "No", "Parziale", "Da verificare"],
-            index=3
-        )
-
-    st.subheader("4. Necessità e proporzionalità")
+    st.header("4. Necessity and proportionality")
 
     col5, col6 = st.columns(2)
 
     with col5:
         alternatives_assessed = st.selectbox(
-            "Sono state valutate alternative meno intrusive?",
-            ["Sì", "No", "Parziale", "Da verificare"],
-            index=3
+            "Have less intrusive alternatives been assessed?",
+            YES_NO_OPTIONS
         )
 
         necessity_reasoning = st.text_area(
-            "Motivazione di necessità",
-            value="",
-            height=100,
-            placeholder="Perché è necessario usare questo sistema, questi dati e questa forma di automazione?"
+            "Necessity reasoning",
+            "",
+            placeholder=(
+                "Why is this system, these data and this form of automation necessary? "
+                "Could the same purpose be achieved with a less intrusive measure?"
+            )
         )
 
     with col6:
         proportionality_reasoning = st.text_area(
-            "Motivazione di proporzionalità",
-            value="",
-            height=100,
-            placeholder="Quali benefici concreti giustificano i rischi? Chi beneficia e chi sopporta il rischio?"
+            "Proportionality reasoning",
+            "",
+            placeholder=(
+                "Which concrete benefits justify the risks? "
+                "Who benefits, who bears the risk, and is the residual risk acceptable?"
+            )
         )
 
-    st.subheader("5. Art. 9 / Art. 27 operational layer")
+    st.header("5. Fundamental rights safeguards and contestability")
 
     col7, col8 = st.columns(2)
 
     with col7:
-        subgroup_testing = st.selectbox(
-            "Sono stati previsti test per sottogruppi?",
-            ["Sì", "No", "Parziale", "Non applicabile", "Da verificare"],
-            index=4
-        )
-
-        monitoring = st.selectbox(
-            "È previsto monitoraggio post-deployment?",
-            ["Sì", "No", "Parziale", "Da verificare"],
-            index=3
-        )
-
-    with col8:
         human_oversight = st.selectbox(
-            "Human oversight",
-            ["Effettivo", "Solo formale", "Assente", "Non applicabile", "Da verificare"],
-            index=4
+            "Is there meaningful human oversight?",
+            ["Effective", "Merely formal", "Absent", "Not applicable", "To be verified"]
         )
 
         contestability = st.selectbox(
-            "Complaint / contestability mechanism",
-            ["Sì", "No", "Parziale", "Da verificare"],
-            index=3
+            "Can affected persons contest the outcome?",
+            YES_NO_OPTIONS
+        )
+
+        remedy_effectiveness = st.selectbox(
+            "Is the remedy capable of changing the outcome?",
+            YES_NO_OPTIONS
+        )
+
+    with col8:
+        fallback_channel = st.selectbox(
+            "Is there a reliable non-automated or alternative channel where needed?",
+            YES_NO_OPTIONS
+        )
+
+        bias_control = st.selectbox(
+            "Are bias and proxy-discrimination safeguards demonstrated?",
+            YES_NO_OPTIONS
+        )
+
+        affected_groups_consulted = st.selectbox(
+            "Have affected groups or representatives been consulted?",
+            ["Yes", "No", "Partly", "Not applicable", "To be verified"]
         )
 
     governance_notes = st.text_area(
-        "Note su governance interna, ruoli e responsabilità",
-        value="",
-        height=80,
-        placeholder="Indicare chi decide, chi controlla, chi risponde e chi aggiorna l'assessment."
+        "Governance and accountability notes",
+        "",
+        placeholder=(
+            "Who decides, who controls, who responds, who updates the assessment, "
+            "and who is accountable for residual risk?"
+        )
     )
 
-    submitted = st.form_submit_button("Genera risk register e report")
+    show_provider_module = (
+        "Provider" in filer_role
+        or "Joint assessment team" in filer_role
+    )
+
+    show_deployer_module = (
+        "Deployer" in filer_role
+        or "Joint assessment team" in filer_role
+    )
+
+    if show_provider_module:
+        st.header("6A. Provider-side add-on")
+        st.caption(
+            "Opened because the filer includes a provider role. "
+            "This section supports provider-side risk-management reasoning."
+        )
+
+        col9, col10 = st.columns(2)
+
+        with col9:
+            misuse_assessed = st.selectbox(
+                "Has reasonably foreseeable misuse been assessed?",
+                YES_NO_OPTIONS
+            )
+
+            subgroup_testing = st.selectbox(
+                "Has testing been planned for affected subgroups?",
+                ["Yes", "No", "Partly", "Not applicable", "To be verified"]
+            )
+
+        with col10:
+            residual_risk_defined = st.selectbox(
+                "Has residual risk been defined and documented?",
+                YES_NO_OPTIONS
+            )
+    else:
+        misuse_assessed = "Not applicable"
+        subgroup_testing = "Not applicable"
+        residual_risk_defined = "Not applicable"
+
+    if show_deployer_module:
+        st.header("6B. Deployer-side add-on")
+        st.caption(
+            "Opened because the filer includes a deployer role. "
+            "This section supports context-specific deployment and FRIA reasoning."
+        )
+
+        col11, col12 = st.columns(2)
+
+        with col11:
+            deployment_frequency = st.selectbox(
+                "Expected frequency of use",
+                ["One-off", "Occasional", "Regular", "Continuous", "To be verified"]
+            )
+
+            affected_categories_described = st.selectbox(
+                "Are categories of affected persons and groups described?",
+                YES_NO_OPTIONS
+            )
+
+        with col12:
+            monitoring = st.selectbox(
+                "Is post-deployment monitoring planned?",
+                YES_NO_OPTIONS
+            )
+    else:
+        deployment_frequency = "Not applicable"
+        affected_categories_described = "Not applicable"
+        monitoring = "Not applicable"
+
+    submitted = st.form_submit_button("Generate fundamental rights assessment")
 
 
 if submitted:
     inputs = {
         "project_name": project_name,
-        "organization": organization,
+        "organisation": organisation,
+        "filer_role": filer_role,
         "accountability_owner": accountability_owner,
         "legal_basis": legal_basis,
-        "decision_effect": decision_effect,
-        "decision_effects": [decision_effect],
-        "data_strictly_necessary": data_strictly_necessary,
+        "data_necessary": data_necessary,
         "purpose": purpose,
         "data_categories": data_categories,
         "contexts": contexts,
         "actions": actions,
+        "decision_effect": decision_effect,
         "groups": groups,
-        "misuse_assessed": misuse_assessed,
         "alternatives_assessed": alternatives_assessed,
         "necessity_reasoning": necessity_reasoning,
         "proportionality_reasoning": proportionality_reasoning,
-        "subgroup_testing": subgroup_testing,
-        "monitoring": monitoring,
         "human_oversight": human_oversight,
         "contestability": contestability,
-        "governance_notes": governance_notes
+        "remedy_effectiveness": remedy_effectiveness,
+        "fallback_channel": fallback_channel,
+        "bias_control": bias_control,
+        "affected_groups_consulted": affected_groups_consulted,
+        "governance_notes": governance_notes,
+        "misuse_assessed": misuse_assessed,
+        "subgroup_testing": subgroup_testing,
+        "residual_risk_defined": residual_risk_defined,
+        "deployment_frequency": deployment_frequency,
+        "affected_categories_described": affected_categories_described,
+        "monitoring": monitoring
     }
 
-    activated_risks = activate_risks(inputs)
-    flags = compute_red_flags(inputs, activated_risks)
-    scrutiny_level = compute_scrutiny_level(inputs, flags)
-    outcome = recommend_outcome(scrutiny_level, flags)
-    risk_df = build_risk_dataframe(activated_risks)
-    report_md = build_markdown_report(
-        inputs,
-        activated_risks,
-        flags,
-        scrutiny_level,
-        outcome
-    )
+    risks = activate_fundamental_rights_risks(inputs)
+    flags = compute_red_flags(inputs, risks)
+    scrutiny_level = compute_scrutiny_level(inputs, flags, risks)
+    outcome = compute_outcome(flags, scrutiny_level)
+    report = build_report(inputs, risks, flags, scrutiny_level, outcome)
 
-    st.session_state.last_result = {
+    st.session_state["last_assessment"] = {
         "inputs": inputs,
-        "activated_risks": activated_risks,
+        "risks": risks,
         "flags": flags,
         "scrutiny_level": scrutiny_level,
         "outcome": outcome,
-        "risk_df": risk_df,
-        "report_md": report_md
+        "report": report
     }
 
 
 # ---------------------------------------------------------------------
-# 6. OUTPUT
+# OUTPUT
 # ---------------------------------------------------------------------
 
-if st.session_state.last_result:
-    result = st.session_state.last_result
+if "last_assessment" in st.session_state:
+    result = st.session_state["last_assessment"]
 
     st.divider()
-    st.subheader("Risultato assessment")
+    st.header("Assessment result")
 
-    metric1, metric2, metric3 = st.columns(3)
+    col_a, col_b, col_c = st.columns(3)
 
-    with metric1:
-        st.metric("Rischi attivati", len(result["activated_risks"]))
+    with col_a:
+        st.metric("Fundamental-rights risks selected", len(result["risks"]))
 
-    with metric2:
-        st.metric("Livello scrutinio", result["scrutiny_level"])
-
-    with metric3:
+    with col_b:
         st.metric("Red flags", len(result["flags"]))
 
-    st.markdown(f"### Esito raccomandato: **{result['outcome']}**")
+    with col_c:
+        st.metric("Scrutiny level", result["scrutiny_level"])
+
+    st.subheader("Recommended outcome")
+    st.markdown(f"**{result['outcome']}**")
 
     st.subheader("Red flags")
 
     if not result["flags"]:
-        st.success("Nessuna red flag automatica rilevata.")
+        st.success("No red flags detected.")
     else:
-        for flag in result["flags"]:
-            message = f"**{flag['label']}** — {flag['explanation']}"
-
-            if flag["severity"] == "blocking":
-                st.error(message)
-            elif flag["severity"] == "high":
-                st.warning(message)
+        for level, message in result["flags"]:
+            if level == "BLOCKING":
+                st.error(f"{level}: {message}")
+            elif level == "HIGH":
+                st.warning(f"{level}: {message}")
             else:
-                st.info(message)
+                st.info(f"{level}: {message}")
 
-    st.subheader("Risk register")
+    st.subheader("Fundamental rights risk register")
 
-    if result["risk_df"].empty:
-        st.info("Nessun rischio attivato automaticamente. Verificare manualmente.")
+    if result["risks"]:
+        df = pd.DataFrame(result["risks"])
+        st.dataframe(df, use_container_width=True)
     else:
-        st.dataframe(result["risk_df"], use_container_width=True)
+        st.info("No risk automatically activated. Manual legal review is required.")
 
-    st.subheader("Download")
+    st.subheader("Download report")
 
-    file_base = result["inputs"]["project_name"].lower().replace(" ", "_").replace("/", "_")
+    safe_file_name = (
+        result["inputs"]["project_name"]
+        .lower()
+        .replace(" ", "_")
+        .replace("/", "_")
+    )
 
     st.download_button(
-        label="Scarica report Markdown",
-        data=result["report_md"],
-        file_name=f"{file_base}_dpia_fria_report.md",
+        "Download Markdown report",
+        result["report"],
+        file_name=f"{safe_file_name}_fundamental_rights_assessment.md",
         mime="text/markdown"
     )
 
-    json_payload = {
-        "inputs": result["inputs"],
-        "activated_risks": result["activated_risks"],
-        "flags": result["flags"],
-        "scrutiny_level": result["scrutiny_level"],
-        "outcome": result["outcome"],
-        "generated_at": datetime.now().isoformat()
-    }
-
     st.download_button(
-        label="Scarica assessment JSON",
-        data=json.dumps(json_payload, ensure_ascii=False, indent=2),
-        file_name=f"{file_base}_assessment.json",
+        "Download JSON assessment",
+        json.dumps(result, ensure_ascii=False, indent=2),
+        file_name=f"{safe_file_name}_assessment.json",
         mime="application/json"
     )
-else:
-    st.info("Compila il form e clicca su 'Genera risk register e report'.")
