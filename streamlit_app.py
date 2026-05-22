@@ -125,6 +125,47 @@ FREQUENCY_OPTIONS = [
     "To be verified"
 ]
 
+DATA_QUALITY_MEASURES = [
+    "Data relevance check",
+    "Data accuracy check",
+    "Data completeness check",
+    "Representativeness assessment",
+    "Bias/proxy-variable analysis",
+    "Outdated data removal",
+    "Data lineage documentation",
+    "Training/validation/test data separation",
+    "Error correction procedure",
+    "Ongoing data quality monitoring",
+    "None / to be defined"
+]
+
+HUMAN_OVERSIGHT_MEASURES = [
+    "Human-in-the-loop before final decision",
+    "Human-on-the-loop monitoring",
+    "Human override power",
+    "Mandatory review for adverse outcomes",
+    "Escalation to qualified reviewer",
+    "Training against automation bias",
+    "Documentation of human review",
+    "Time and authority to depart from system output",
+    "Periodic audit of human decisions",
+    "None / to be defined"
+]
+
+CONTESTABILITY_MEASURES = [
+    "Individual notice of AI-assisted decision",
+    "Meaningful explanation of outcome",
+    "Accessible complaint channel",
+    "Human review upon request",
+    "Possibility to correct input data",
+    "Possibility to submit additional evidence",
+    "Reasoned response to complaint",
+    "Defined response deadlines",
+    "Reversal or correction of adverse outcome",
+    "Escalation to independent body or DPO",
+    "None / to be defined"
+]
+
 
 # ---------------------------------------------------------------------
 # FUNDAMENTAL RIGHTS RISK CATALOGUE
@@ -626,6 +667,10 @@ def is_deployer_role(inputs):
     )
 
 
+def no_measure_selected(measures):
+    return "None / to be defined" in measures or len(measures) == 0
+
+
 def activate_fundamental_rights_risks(inputs):
     activated = []
 
@@ -777,26 +822,53 @@ def compute_red_flags(inputs, risks):
     if inputs["alternatives_assessed"] in ["No", "To be verified"]:
         flags.append(("HIGH", "Less intrusive alternatives have not been sufficiently assessed."))
 
-    if significant_decision and inputs["contestability"] != "Yes":
-        flags.append(("BLOCKING", "Affected persons cannot effectively contest a significant outcome."))
+    # Mitigation layer: data quality
+    if inputs["data_quality_assessed"] in ["No", "To be verified"]:
+        flags.append(("HIGH", "Data quality has not been sufficiently assessed."))
 
-    if significant_decision and inputs["remedy_effectiveness"] in ["No", "To be verified"]:
-        flags.append(("HIGH", "The remedy is not shown to be capable of changing the outcome."))
+    if no_measure_selected(inputs["data_quality_measures"]):
+        flags.append(("HIGH", "Data quality mitigation measures are missing or still to be defined."))
 
-    if significant_decision and inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "Human oversight is absent, merely formal or insufficiently demonstrated in a significant decision-making context."
-        ))
-
-    if not inputs["accountability_owner"].strip():
-        flags.append(("HIGH", "Internal accountability owner is missing."))
+    if inputs["data_quality_residual_risk"] in ["High", "Very high"]:
+        flags.append(("HIGH", "Residual risk after data quality measures remains high."))
 
     if "FR2" in risk_ids and inputs["bias_control"] in ["No", "To be verified"]:
         flags.append((
             "HIGH",
             "Discrimination risk is present, but bias/proxy-control safeguards are not sufficiently demonstrated."
         ))
+
+    # Mitigation layer: human oversight
+    if significant_decision and inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
+        flags.append((
+            "HIGH",
+            "Human oversight is absent, merely formal or insufficiently demonstrated in a significant decision-making context."
+        ))
+
+    if significant_decision and no_measure_selected(inputs["human_oversight_measures"]):
+        flags.append((
+            "HIGH",
+            "Human oversight measures are missing or still to be defined in a significant decision-making context."
+        ))
+
+    if inputs["human_oversight_residual_risk"] in ["High", "Very high"]:
+        flags.append(("HIGH", "Residual risk after human oversight measures remains high."))
+
+    # Mitigation layer: contestability and remedies
+    if significant_decision and inputs["contestability"] != "Yes":
+        flags.append(("BLOCKING", "Affected persons cannot effectively contest a significant outcome."))
+
+    if significant_decision and inputs["remedy_effectiveness"] in ["No", "To be verified"]:
+        flags.append(("HIGH", "The remedy is not shown to be capable of changing the outcome."))
+
+    if significant_decision and no_measure_selected(inputs["contestability_measures"]):
+        flags.append((
+            "BLOCKING",
+            "Contestability measures are missing or still to be defined in a significant decision-making context."
+        ))
+
+    if inputs["contestability_residual_risk"] in ["High", "Very high"]:
+        flags.append(("HIGH", "Residual risk after contestability measures remains high."))
 
     if "FR10" in risk_ids and inputs["remedy_effectiveness"] != "Yes":
         flags.append(("HIGH", "A remedy risk is present, but remedy effectiveness is not demonstrated."))
@@ -807,6 +879,10 @@ def compute_red_flags(inputs, risks):
             "Potential exclusion from services or opportunities is present without a reliable fallback channel."
         ))
 
+    if not inputs["accountability_owner"].strip():
+        flags.append(("HIGH", "Internal accountability owner is missing."))
+
+    # Provider-side Article 9 red flags
     if is_provider_role(inputs):
         if inputs["provider_lifecycle_review"] in ["No", "To be verified"]:
             flags.append((
@@ -838,6 +914,7 @@ def compute_red_flags(inputs, risks):
                 "Article 9 provider add-on: post-market monitoring feedback is not linked to risk review."
             ))
 
+    # Deployer-side Article 27 red flags
     if is_deployer_role(inputs):
         if inputs["deployer_process_description"].strip() == "":
             flags.append((
@@ -854,7 +931,7 @@ def compute_red_flags(inputs, risks):
         if inputs["provider_article13_info_used"] in ["No", "To be verified"]:
             flags.append((
                 "MEDIUM",
-                "Article 27 deployer add-on: provider information under Article 13 has not been used or verified."
+                "Article 27 deployer add-on: provider information/instructions have not been used or verified."
             ))
 
         if inputs["deployer_human_oversight_according_to_instructions"] in ["No", "To be verified"]:
@@ -925,6 +1002,15 @@ def compute_scrutiny_level(inputs, flags, risks):
         "Access/exclusion/priority in services or opportunities"
     ]:
         score += 3
+
+    if inputs["data_quality_residual_risk"] in ["High", "Very high"]:
+        score += 2
+
+    if inputs["human_oversight_residual_risk"] in ["High", "Very high"]:
+        score += 2
+
+    if inputs["contestability_residual_risk"] in ["High", "Very high"]:
+        score += 2
 
     if is_provider_role(inputs):
         if inputs["provider_health_safety_risk"] in ["High", "Very high"]:
@@ -1014,13 +1100,31 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
     report.append(f"- Proportionality reasoning: {inputs['proportionality_reasoning']}")
     report.append("")
 
-    report.append("## 5. Fundamental rights safeguards")
+    report.append("## 5. Mitigation measures")
+    report.append("")
+    report.append("### 5.1 Data quality and data governance")
+    report.append(f"- Data quality assessed: {inputs['data_quality_assessed']}")
+    report.append(f"- Data quality measures: {', '.join(inputs['data_quality_measures'])}")
+    report.append(f"- Bias/proxy-control safeguards: {inputs['bias_control']}")
+    report.append(f"- Residual risk after data quality measures: {inputs['data_quality_residual_risk']}")
+    report.append(f"- Data governance notes: {inputs['data_governance_notes']}")
+    report.append("")
+    report.append("### 5.2 Human oversight")
     report.append(f"- Human oversight: {inputs['human_oversight']}")
+    report.append(f"- Human oversight measures: {', '.join(inputs['human_oversight_measures'])}")
+    report.append(f"- Residual risk after human oversight measures: {inputs['human_oversight_residual_risk']}")
+    report.append(f"- Human oversight notes: {inputs['human_oversight_notes']}")
+    report.append("")
+    report.append("### 5.3 Contestability and remedies")
     report.append(f"- Contestability: {inputs['contestability']}")
     report.append(f"- Remedy effectiveness: {inputs['remedy_effectiveness']}")
+    report.append(f"- Contestability measures: {', '.join(inputs['contestability_measures'])}")
     report.append(f"- Fallback channel: {inputs['fallback_channel']}")
-    report.append(f"- Bias/proxy-control safeguards: {inputs['bias_control']}")
+    report.append(f"- Residual risk after contestability measures: {inputs['contestability_residual_risk']}")
     report.append(f"- Affected groups consulted: {inputs['affected_groups_consulted']}")
+    report.append(f"- Contestability notes: {inputs['contestability_notes']}")
+    report.append("")
+    report.append("### 5.4 Governance")
     report.append(f"- Governance notes: {inputs['governance_notes']}")
     report.append("")
 
@@ -1102,7 +1206,9 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
         "This tool does not automate constitutional judgment. It uses the DPIA as the common "
         "procedural baseline. Provider-side Article 9 questions and deployer-side Article 27 "
         "questions are opened only when relevant to the role of the filer. Their function is to "
-        "feed the fundamental-rights risk selection layer without duplicating the DPIA."
+        "feed the fundamental-rights risk selection layer without duplicating the DPIA. The mitigation "
+        "layer tests whether identified risks are addressed through three minimum safeguards: data quality, "
+        "meaningful human oversight and effective contestability."
     )
 
     return "\n".join(report)
@@ -1112,7 +1218,7 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
 # UI
 # ---------------------------------------------------------------------
 
-with st.expander("Methodological logic", expanded=False):
+with st.expander("Methodological logic", expanded=True):
     st.markdown(
         """
         This tool uses the **DPIA as the common procedural baseline**.
@@ -1123,6 +1229,9 @@ with st.expander("Methodological logic", expanded=False):
         - legal mechanisms of harm;
         - necessity and proportionality;
         - remedies, contestability and accountability.
+
+        The mitigation layer tests whether identified risks are addressed through three minimum safeguards:
+        **data quality**, **meaningful human oversight** and **effective contestability**.
 
         **Provider-side Article 9 add-on** opens only if the filer includes a provider role.
         It first asks about health and safety risk and then connects those risks to fundamental rights.
@@ -1233,16 +1342,88 @@ with st.form("assessment_form"):
             )
         )
 
-    st.header("5. Fundamental rights safeguards and contestability")
+    st.header("5. Mitigation measures: data quality, human oversight and contestability")
+
+    st.markdown(
+        """
+        This section tests whether fundamental-rights risks are actually mitigated.
+        It focuses on three minimum safeguards: **data quality**, **meaningful human oversight**,
+        and **effective contestability**.
+        """
+    )
+
+    st.subheader("5.1 Data quality and data governance")
 
     col7, col8 = st.columns(2)
 
     with col7:
+        data_quality_assessed = st.selectbox(
+            "Has data quality been assessed?",
+            YES_NO_OPTIONS
+        )
+
+        data_quality_measures = st.multiselect(
+            "Which data quality measures are in place?",
+            DATA_QUALITY_MEASURES,
+            default=["None / to be defined"]
+        )
+
+        data_quality_residual_risk = st.selectbox(
+            "Residual risk after data quality measures",
+            RISK_LEVELS
+        )
+
+    with col8:
+        bias_control = st.selectbox(
+            "Are bias and proxy-discrimination safeguards demonstrated?",
+            YES_NO_OPTIONS
+        )
+
+        data_governance_notes = st.text_area(
+            "Data quality and governance notes",
+            "",
+            placeholder=(
+                "Explain data sources, representativeness, known limitations, "
+                "bias/proxy controls, error correction and residual risk."
+            )
+        )
+
+    st.subheader("5.2 Human oversight")
+
+    col9, col10 = st.columns(2)
+
+    with col9:
         human_oversight = st.selectbox(
             "Is there meaningful human oversight?",
             ["Effective", "Merely formal", "Absent", "Not applicable", "To be verified"]
         )
 
+        human_oversight_measures = st.multiselect(
+            "Which human oversight measures are in place?",
+            HUMAN_OVERSIGHT_MEASURES,
+            default=["None / to be defined"]
+        )
+
+        human_oversight_residual_risk = st.selectbox(
+            "Residual risk after human oversight measures",
+            RISK_LEVELS
+        )
+
+    with col10:
+        human_oversight_notes = st.text_area(
+            "Human oversight notes",
+            "",
+            placeholder=(
+                "Explain who reviews the output, when, with what authority, "
+                "whether they can override the system, and how automation bias is prevented."
+            )
+        )
+
+    st.subheader("5.3 Contestability, remedy and complaint mechanisms")
+
+    col11, col12 = st.columns(2)
+
+    with col11:
         contestability = st.selectbox(
             "Can affected persons contest the outcome?",
             YES_NO_OPTIONS
@@ -1253,15 +1434,21 @@ with st.form("assessment_form"):
             YES_NO_OPTIONS
         )
 
-    with col8:
+        contestability_measures = st.multiselect(
+            "Which contestability measures are in place?",
+            CONTESTABILITY_MEASURES,
+            default=["None / to be defined"]
+        )
+
+    with col12:
         fallback_channel = st.selectbox(
             "Is there a reliable non-automated or alternative channel where needed?",
             YES_NO_OPTIONS
         )
 
-        bias_control = st.selectbox(
-            "Are bias and proxy-discrimination safeguards demonstrated?",
-            YES_NO_OPTIONS
+        contestability_residual_risk = st.selectbox(
+            "Residual risk after contestability measures",
+            RISK_LEVELS
         )
 
         affected_groups_consulted = st.selectbox(
@@ -1269,12 +1456,23 @@ with st.form("assessment_form"):
             ["Yes", "No", "Partly", "Not applicable", "To be verified"]
         )
 
+    contestability_notes = st.text_area(
+        "Contestability and remedy notes",
+        "",
+        placeholder=(
+            "Explain how affected persons are informed, how they can contest, "
+            "whether contestation can change the outcome, and how complaints are handled."
+        )
+    )
+
+    st.subheader("5.4 Governance of mitigation measures")
+
     governance_notes = st.text_area(
         "Governance and accountability notes",
         "",
         placeholder=(
-            "Who decides, who controls, who responds, who updates the assessment, "
-            "and who is accountable for residual risk?"
+            "Who owns each mitigation measure? Who monitors effectiveness? "
+            "Who updates the assessment? Who is accountable for residual risk?"
         )
     )
 
@@ -1302,9 +1500,9 @@ with st.form("assessment_form"):
             "targeted risk-management measures."
         )
 
-        col9, col10 = st.columns(2)
+        col13, col14 = st.columns(2)
 
-        with col9:
+        with col13:
             provider_lifecycle_review = st.selectbox(
                 "Is the risk-management system continuous, iterative and updated across the lifecycle?",
                 YES_NO_OPTIONS
@@ -1325,7 +1523,7 @@ with st.form("assessment_form"):
                 RISK_LEVELS
             )
 
-        with col10:
+        with col14:
             provider_misuse_risk = st.selectbox(
                 "Risk under reasonably foreseeable misuse",
                 RISK_LEVELS
@@ -1393,9 +1591,9 @@ with st.form("assessment_form"):
             )
         )
 
-        col11, col12 = st.columns(2)
+        col15, col16 = st.columns(2)
 
-        with col11:
+        with col15:
             deployment_period = st.text_input(
                 "Expected period of use",
                 "To be verified"
@@ -1416,7 +1614,7 @@ with st.form("assessment_form"):
                 YES_NO_OPTIONS
             )
 
-        with col12:
+        with col16:
             deployer_human_oversight_according_to_instructions = st.selectbox(
                 "Is human oversight implemented according to the provider's instructions for use?",
                 YES_NO_OPTIONS
@@ -1482,10 +1680,22 @@ if submitted:
         "alternatives_assessed": alternatives_assessed,
         "necessity_reasoning": necessity_reasoning,
         "proportionality_reasoning": proportionality_reasoning,
+
+        # Mitigation measures
+        "data_quality_assessed": data_quality_assessed,
+        "data_quality_measures": data_quality_measures,
+        "data_quality_residual_risk": data_quality_residual_risk,
+        "data_governance_notes": data_governance_notes,
         "human_oversight": human_oversight,
+        "human_oversight_measures": human_oversight_measures,
+        "human_oversight_residual_risk": human_oversight_residual_risk,
+        "human_oversight_notes": human_oversight_notes,
         "contestability": contestability,
         "remedy_effectiveness": remedy_effectiveness,
+        "contestability_measures": contestability_measures,
+        "contestability_residual_risk": contestability_residual_risk,
         "fallback_channel": fallback_channel,
+        "contestability_notes": contestability_notes,
         "bias_control": bias_control,
         "affected_groups_consulted": affected_groups_consulted,
         "governance_notes": governance_notes,
