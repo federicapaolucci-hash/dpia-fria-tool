@@ -820,6 +820,211 @@ def activate_fundamental_rights_risks(inputs):
 
     return activated
 
+def classify_risk_source(risk_id):
+    if risk_id.startswith("FR-A9"):
+        return "Article 9 provider add-on"
+    if risk_id.startswith("FR-A27"):
+        return "Article 27 deployer add-on"
+    if risk_id in ["FR1"]:
+        return "DPIA data-processing layer"
+    if risk_id in ["FR2", "FR3", "FR4", "FR5", "FR6", "FR7", "FR8", "FR9", "FR10", "FR11"]:
+        return "Fundamental-rights legal risk layer"
+    return "Integrated assessment"
+
+
+def compute_risk_priority(risk, inputs, flags):
+    risk_id = risk["ID"]
+
+    significant_decision = inputs["decision_effect"] in [
+        "Legal or similarly significant effect",
+        "Access/exclusion/priority in services or opportunities"
+    ]
+
+    vulnerable_context = (
+        inputs["vulnerable_subjects"] == "Yes"
+        or inputs["power_asymmetry"] == "Yes"
+        or any(group in inputs["groups"] for group in [
+            "Children",
+            "Migrants/asylum seekers",
+            "Persons with disabilities",
+            "Protected or vulnerable groups",
+            "Welfare beneficiaries",
+            "Patients"
+        ])
+    )
+
+    blocking_flags = [message for level, message in flags if level == "BLOCKING"]
+    high_flags = [message for level, message in flags if level == "HIGH"]
+
+    if risk_id in ["FR10", "FR4"] and significant_decision:
+        if inputs["contestability"] != "Yes" or inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
+            return "Very high"
+
+    if risk_id == "FR2":
+        if inputs["bias_control"] in ["No", "To be verified"] or inputs["data_quality_residual_risk"] in ["High", "Very high"]:
+            return "Very high"
+
+    if risk_id in ["FR5", "FR-A27-MATERIALISATION"]:
+        if inputs["fallback_channel"] in ["No", "To be verified"] or inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
+            return "Very high"
+
+    if risk_id.startswith("FR-A9"):
+        if inputs["provider_health_safety_risk"] in ["High", "Very high"] or inputs["provider_fr_risk"] in ["High", "Very high"]:
+            return "High"
+
+    if vulnerable_context and significant_decision:
+        return "High"
+
+    if blocking_flags:
+        return "High"
+
+    if high_flags:
+        return "High"
+
+    return "Medium"
+
+
+def suggested_actions_for_risk(risk_id):
+    action_map = {
+        "FR1": [
+            ("Review data minimisation and retention", "Data inventory; minimisation memo; retention schedule"),
+            ("Verify data-subject rights workflow", "Rights request procedure; response-time evidence")
+        ],
+        "FR2": [
+            ("Perform bias and proxy-variable analysis", "Bias testing report; subgroup performance analysis"),
+            ("Review representativeness of datasets", "Dataset documentation; representativeness assessment")
+        ],
+        "FR3": [
+            ("Prepare meaningful explanation of outcome", "Explanation template; decision criteria documentation"),
+            ("Document role of AI in the decision", "Transparency notice; internal decision-flow map")
+        ],
+        "FR4": [
+            ("Strengthen human oversight", "Human oversight procedure; override protocol"),
+            ("Train reviewers against automation bias", "Training material; attendance log; review audit")
+        ],
+        "FR5": [
+            ("Create fallback or alternative access channel", "Fallback procedure; escalation workflow"),
+            ("Define urgent review for adverse outcomes", "Review deadlines; escalation matrix")
+        ],
+        "FR6": [
+            ("Limit monitoring scope and duration", "Monitoring policy; purpose limitation statement"),
+            ("Assess chilling-effect risk", "Impact analysis; user/stakeholder consultation evidence")
+        ],
+        "FR7": [
+            ("Review profiling and labelling logic", "Profile taxonomy; label-risk review"),
+            ("Enable correction or challenge of classification", "Correction workflow; appeal procedure")
+        ],
+        "FR8": [
+            ("Audit content ranking or moderation effects", "Moderation/ranking audit; over-removal analysis"),
+            ("Create effective appeal for content decisions", "Appeal workflow; user notice")
+        ],
+        "FR9": [
+            ("Create accountability matrix", "RACI matrix; internal governance document"),
+            ("Define escalation and audit trail", "Escalation procedure; logging policy")
+        ],
+        "FR10": [
+            ("Create accessible complaint mechanism", "Complaint workflow; public/internal instructions"),
+            ("Ensure remedy can change the outcome", "Review powers; reversal/correction procedure")
+        ],
+        "FR11": [
+            ("Perform safety and adverse-event testing", "Safety testing report; incident logs"),
+            ("Define emergency fallback and escalation", "Incident response plan; emergency override procedure")
+        ],
+        "FR-A9-HS": [
+            ("Adopt targeted health/safety risk-control measures", "Safety risk register; targeted mitigation plan"),
+            ("Link safety incidents to lifecycle risk review", "Lifecycle review log; post-market monitoring evidence")
+        ],
+        "FR-A9-MISUSE": [
+            ("Assess and document foreseeable misuse scenarios", "Misuse analysis; use restriction documentation"),
+            ("Add guardrails and instructions for use", "Instructions for use; technical/organisational guardrails")
+        ],
+        "FR-A27-SCALE": [
+            ("Monitor cumulative impact of repeated deployment", "Periodic review report; complaint trend analysis"),
+            ("Define suspension trigger for cumulative harm", "Suspension criteria; governance decision log")
+        ],
+        "FR-A27-MATERIALISATION": [
+            ("Define measures if risks materialise", "Incident response plan; complaint escalation workflow"),
+            ("Assign internal governance owner", "RACI matrix; owner appointment; response deadlines")
+        ]
+    }
+
+    return action_map.get(
+        risk_id,
+        [("Perform manual legal review", "Legal assessment note; governance decision")]
+    )
+
+
+def build_operational_risk_register(risks, inputs, flags):
+    rows = []
+
+    for risk in risks:
+        risk_id = risk["ID"]
+        rows.append({
+            "Risk ID": risk_id,
+            "Risk source": classify_risk_source(risk_id),
+            "Priority": compute_risk_priority(risk, inputs, flags),
+            "Fundamental rights risk": risk["Fundamental rights risk"],
+            "Rights involved": risk["Rights involved"],
+            "Triggered by": risk["Triggered by"],
+            "Required safeguards to test": risk["Safeguards to test"],
+            "Residual risk reference": (
+                "Data quality: "
+                + inputs["data_quality_residual_risk"]
+                + " | Human oversight: "
+                + inputs["human_oversight_residual_risk"]
+                + " | Contestability: "
+                + inputs["contestability_residual_risk"]
+            ),
+            "Assessment status": "Open"
+        })
+
+    return pd.DataFrame(rows)
+
+
+def build_mitigation_action_plan(risks, inputs, flags):
+    rows = []
+
+    for risk in risks:
+        risk_id = risk["ID"]
+        priority = compute_risk_priority(risk, inputs, flags)
+        actions = suggested_actions_for_risk(risk_id)
+
+        for action, evidence in actions:
+            rows.append({
+                "Risk ID": risk_id,
+                "Priority": priority,
+                "Action required": action,
+                "Evidence to collect": evidence,
+                "Suggested owner": suggest_owner_for_action(action),
+                "Status": "To be started",
+                "Deadline": "To be defined"
+            })
+
+    return pd.DataFrame(rows)
+
+
+def suggest_owner_for_action(action):
+    action_lower = action.lower()
+
+    if "data" in action_lower or "dataset" in action_lower or "minimisation" in action_lower:
+        return "DPO / Data governance lead"
+
+    if "bias" in action_lower or "subgroup" in action_lower or "testing" in action_lower:
+        return "AI governance / Model validation team"
+
+    if "human oversight" in action_lower or "reviewer" in action_lower or "override" in action_lower:
+        return "Business process owner / Human oversight lead"
+
+    if "complaint" in action_lower or "remedy" in action_lower or "appeal" in action_lower:
+        return "Legal / Complaints handling team"
+
+    if "safety" in action_lower or "incident" in action_lower or "emergency" in action_lower:
+        return "Risk management / Safety owner"
+
+    if "accountability" in action_lower or "governance" in action_lower or "raci" in action_lower:
+        return "AI governance officer"
+
+    return "Assessment owner"
 
 def compute_red_flags(inputs, risks):
     flags = []
@@ -1317,6 +1522,20 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
             report.append(f"- Safeguards to test: {risk['Safeguards to test']}")
             report.append("")
 
+    report.append("## 6B. Operational use of the risk register")
+    report.append(
+        "The fundamental-rights risk register is not merely descriptive. "
+        "It operates as a working governance register connecting each identified risk "
+        "to its assessment source, priority, required safeguards, mitigation evidence, "
+        "responsible owner and residual-risk decision."
+    )
+    report.append(
+        "The mitigation action plan translates each selected risk into concrete actions, "
+        "evidence requirements and ownership assignments. This allows the sandbox to observe "
+        "how risks are selected, prioritised, mitigated and justified."
+    )
+    report.append("")
+    
     report.append("## 7. Red flags")
     if not flags:
         report.append("No red flags detected.")
@@ -2138,15 +2357,31 @@ if "last_assessment" in st.session_state:
             else:
                 st.info(f"{level}: {message}")
 
-    st.subheader("Fundamental rights risk register")
+        st.subheader("Operational Fundamental Rights Risk Register")
 
     if result["risks"]:
-        df = pd.DataFrame(result["risks"])
-        st.dataframe(df, use_container_width=True)
+        operational_register = build_operational_risk_register(
+            result["risks"],
+            result["inputs"],
+            result["flags"]
+        )
+        st.dataframe(operational_register, use_container_width=True)
     else:
         st.info("No risk automatically activated. Manual legal review is required.")
 
-    st.subheader("Download report")
+    st.subheader("Mitigation Action Plan")
+
+    if result["risks"]:
+        mitigation_plan = build_mitigation_action_plan(
+            result["risks"],
+            result["inputs"],
+            result["flags"]
+        )
+        st.dataframe(mitigation_plan, use_container_width=True)
+    else:
+        st.info("No mitigation action plan generated.")
+
+       st.subheader("Download report")
 
     safe_file_name = (
         result["inputs"]["project_name"]
@@ -2154,6 +2389,33 @@ if "last_assessment" in st.session_state:
         .replace(" ", "_")
         .replace("/", "_")
     )
+
+    if result["risks"]:
+        operational_register = build_operational_risk_register(
+            result["risks"],
+            result["inputs"],
+            result["flags"]
+        )
+
+        mitigation_plan = build_mitigation_action_plan(
+            result["risks"],
+            result["inputs"],
+            result["flags"]
+        )
+
+        st.download_button(
+            "Download Operational Risk Register CSV",
+            operational_register.to_csv(index=False),
+            file_name=f"{safe_file_name}_operational_risk_register.csv",
+            mime="text/csv"
+        )
+
+        st.download_button(
+            "Download Mitigation Action Plan CSV",
+            mitigation_plan.to_csv(index=False),
+            file_name=f"{safe_file_name}_mitigation_action_plan.csv",
+            mime="text/csv"
+        )
 
     st.download_button(
         "Download Markdown report",
