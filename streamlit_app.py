@@ -16,8 +16,8 @@ st.set_page_config(
 
 st.title("DPIA-based Fundamental Rights Assessment Tool")
 st.caption(
-    "A DPIA-based workflow for identifying, reasoning about, and documenting "
-    "fundamental-rights risks in AI and data-driven decision-making."
+    "A DPIA-based workflow for identifying fundamental-rights risks, "
+    "with role-specific AI Act add-ons for providers and deployers."
 )
 
 
@@ -106,6 +106,22 @@ YES_NO_OPTIONS = [
     "Yes",
     "No",
     "Partly",
+    "To be verified"
+]
+
+RISK_LEVELS = [
+    "Low",
+    "Medium",
+    "High",
+    "Very high",
+    "To be verified"
+]
+
+FREQUENCY_OPTIONS = [
+    "One-off",
+    "Occasional",
+    "Regular",
+    "Continuous",
     "To be verified"
 ]
 
@@ -544,6 +560,46 @@ RISK_CATALOG = [
             "Reasoned outcome",
             "Possibility of review"
         ]
+    },
+    {
+        "id": "FR11",
+        "risk": "Health or safety harm with fundamental-rights implications",
+        "rights": [
+            "Right to life",
+            "Physical and mental integrity",
+            "Health protection",
+            "Dignity",
+            "Non-discrimination"
+        ],
+        "triggers": {
+            "contexts": [
+                "Healthcare",
+                "Physical security/access",
+                "Justice/policing/migration",
+                "Employment/HR",
+                "Welfare/public services"
+            ]
+        },
+        "mechanisms": [
+            "Unsafe output",
+            "Incorrect risk classification",
+            "Delayed intervention",
+            "False positives or false negatives",
+            "Unequal exposure to physical or psychological harm"
+        ],
+        "questions": [
+            "Can system errors create physical, psychological or safety-related harm?",
+            "Are some groups more exposed to such harm?",
+            "Can the harm materialise before human correction is possible?",
+            "Are emergency fallback and escalation mechanisms available?"
+        ],
+        "safeguards": [
+            "Safety testing",
+            "Emergency fallback",
+            "Incident escalation",
+            "Human override",
+            "Monitoring of adverse events"
+        ]
     }
 ]
 
@@ -600,6 +656,94 @@ def activate_fundamental_rights_risks(inputs):
                 "Safeguards to test": " | ".join(item["safeguards"])
             })
 
+    # Provider-side Article 9 information can feed the FR risk selection.
+    if is_provider_role(inputs):
+        if inputs["provider_health_safety_risk"] in ["High", "Very high"]:
+            activated.append({
+                "ID": "FR-A9-HS",
+                "Fundamental rights risk": "Health and safety risk with spill-over effects on fundamental rights",
+                "Rights involved": "Health protection; physical and mental integrity; dignity; equality",
+                "Legal mechanisms of harm": (
+                    "Safety-related malfunction; unsafe output; delayed correction; "
+                    "unequal exposure to harmful consequences"
+                ),
+                "Triggered by": "provider-side Article 9 health/safety risk estimation",
+                "Questions for legal analysis": (
+                    "Does the safety or health risk also affect dignity, equality, autonomy or access to services? | "
+                    "Are vulnerable groups disproportionately exposed? | "
+                    "Can the harm be corrected before it materialises?"
+                ),
+                "Safeguards to test": (
+                    "Targeted risk-control measures | safety testing | incident escalation | "
+                    "human override | monitoring of adverse events"
+                )
+            })
+
+        if inputs["provider_misuse_risk"] in ["High", "Very high"]:
+            activated.append({
+                "ID": "FR-A9-MISUSE",
+                "Fundamental rights risk": "Reasonably foreseeable misuse creating fundamental-rights harm",
+                "Rights involved": "Privacy; non-discrimination; dignity; effective remedy; accountability",
+                "Legal mechanisms of harm": (
+                    "Use outside intended purpose; foreseeable organisational misuse; "
+                    "over-reliance; function creep"
+                ),
+                "Triggered by": "provider-side Article 9 misuse risk estimation",
+                "Questions for legal analysis": (
+                    "What harmful uses are reasonably foreseeable? | "
+                    "Can design, documentation or restrictions reduce such misuse? | "
+                    "Who is responsible for preventing foreseeable misuse?"
+                ),
+                "Safeguards to test": (
+                    "Use restrictions | instructions for use | technical guardrails | "
+                    "logging | user training | escalation duties"
+                )
+            })
+
+    # Deployer-side Article 27 information can feed the FR risk selection.
+    if is_deployer_role(inputs):
+        if inputs["deployment_frequency"] in ["Regular", "Continuous"]:
+            activated.append({
+                "ID": "FR-A27-SCALE",
+                "Fundamental rights risk": "Repeated or continuous deployment increasing cumulative rights impact",
+                "Rights involved": "Privacy; equality; dignity; effective remedy; access to services",
+                "Legal mechanisms of harm": (
+                    "Cumulative exposure; normalisation of automated decision-making; "
+                    "systemic exclusion; repeated surveillance or classification"
+                ),
+                "Triggered by": "deployer-side Article 27 period/frequency of use",
+                "Questions for legal analysis": (
+                    "Does repeated use increase cumulative harm? | "
+                    "Are periodic reviews scheduled? | "
+                    "Can affected persons detect and contest repeated adverse effects?"
+                ),
+                "Safeguards to test": (
+                    "Periodic review | cumulative-impact monitoring | complaint analysis | "
+                    "sampling of decisions | suspension trigger"
+                )
+            })
+
+        if inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
+            activated.append({
+                "ID": "FR-A27-MATERIALISATION",
+                "Fundamental rights risk": "Insufficient measures in case of materialisation of rights-related harm",
+                "Rights involved": "Effective remedy; accountability; due process; good administration",
+                "Legal mechanisms of harm": (
+                    "No internal escalation; no complaint handling; delayed correction; "
+                    "lack of remedial pathway after harm occurs"
+                ),
+                "Triggered by": "deployer-side Article 27 risk-materialisation measures",
+                "Questions for legal analysis": (
+                    "What happens when the risk materialises? | "
+                    "Who acts, within what deadline, and with what powers? | "
+                    "Can the individual obtain correction or reversal?"
+                ),
+                "Safeguards to test": (
+                    "Incident response | complaint mechanism | internal governance | "
+                    "remedial deadlines | suspension or rollback procedure"
+                )
+            })
+
     return activated
 
 
@@ -631,22 +775,13 @@ def compute_red_flags(inputs, risks):
         ))
 
     if inputs["alternatives_assessed"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "Less intrusive alternatives have not been sufficiently assessed."
-        ))
+        flags.append(("HIGH", "Less intrusive alternatives have not been sufficiently assessed."))
 
     if significant_decision and inputs["contestability"] != "Yes":
-        flags.append((
-            "BLOCKING",
-            "Affected persons cannot effectively contest a significant outcome."
-        ))
+        flags.append(("BLOCKING", "Affected persons cannot effectively contest a significant outcome."))
 
     if significant_decision and inputs["remedy_effectiveness"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "The remedy is not shown to be capable of changing the outcome."
-        ))
+        flags.append(("HIGH", "The remedy is not shown to be capable of changing the outcome."))
 
     if significant_decision and inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
         flags.append((
@@ -655,10 +790,7 @@ def compute_red_flags(inputs, risks):
         ))
 
     if not inputs["accountability_owner"].strip():
-        flags.append((
-            "HIGH",
-            "Internal accountability owner is missing."
-        ))
+        flags.append(("HIGH", "Internal accountability owner is missing."))
 
     if "FR2" in risk_ids and inputs["bias_control"] in ["No", "To be verified"]:
         flags.append((
@@ -667,10 +799,7 @@ def compute_red_flags(inputs, risks):
         ))
 
     if "FR10" in risk_ids and inputs["remedy_effectiveness"] != "Yes":
-        flags.append((
-            "HIGH",
-            "A remedy risk is present, but remedy effectiveness is not demonstrated."
-        ))
+        flags.append(("HIGH", "A remedy risk is present, but remedy effectiveness is not demonstrated."))
 
     if "FR5" in risk_ids and inputs["fallback_channel"] in ["No", "To be verified"]:
         flags.append((
@@ -679,35 +808,71 @@ def compute_red_flags(inputs, risks):
         ))
 
     if is_provider_role(inputs):
-        if "FR2" in risk_ids and inputs["subgroup_testing"] != "Yes":
+        if inputs["provider_lifecycle_review"] in ["No", "To be verified"]:
+            flags.append((
+                "MEDIUM",
+                "Article 9 provider add-on: lifecycle review and updating are not clearly established."
+            ))
+
+        if inputs["provider_health_safety_risk"] in ["High", "Very high"] and inputs["provider_targeted_measures"] != "Yes":
             flags.append((
                 "HIGH",
-                "Provider-side add-on: discrimination risk without subgroup testing."
+                "Article 9 provider add-on: high health/safety risk without targeted risk-management measures."
             ))
 
-        if inputs["residual_risk_defined"] != "Yes":
+        if inputs["provider_fr_risk"] in ["High", "Very high"] and inputs["provider_targeted_measures"] != "Yes":
             flags.append((
-                "MEDIUM",
-                "Provider-side add-on: residual risk is not clearly defined and documented."
+                "HIGH",
+                "Article 9 provider add-on: high fundamental-rights risk without targeted risk-management measures."
             ))
 
-        if inputs["misuse_assessed"] in ["No", "To be verified"]:
+        if inputs["provider_misuse_risk"] in ["High", "Very high"] and inputs["misuse_assessed"] != "Yes":
+            flags.append((
+                "HIGH",
+                "Article 9 provider add-on: high misuse risk is not sufficiently assessed."
+            ))
+
+        if inputs["provider_post_market_link"] in ["No", "To be verified"]:
             flags.append((
                 "MEDIUM",
-                "Provider-side add-on: reasonably foreseeable misuse is not sufficiently assessed."
+                "Article 9 provider add-on: post-market monitoring feedback is not linked to risk review."
             ))
 
     if is_deployer_role(inputs):
+        if inputs["deployer_process_description"].strip() == "":
+            flags.append((
+                "HIGH",
+                "Article 27 deployer add-on: the deployer's process in which the AI system will be used is not described."
+            ))
+
         if inputs["affected_categories_described"] != "Yes":
             flags.append((
                 "HIGH",
-                "Deployer-side add-on: affected persons and groups are not sufficiently described in the deployment context."
+                "Article 27 deployer add-on: affected persons and groups are not sufficiently described."
+            ))
+
+        if inputs["provider_article13_info_used"] in ["No", "To be verified"]:
+            flags.append((
+                "MEDIUM",
+                "Article 27 deployer add-on: provider information under Article 13 has not been used or verified."
+            ))
+
+        if inputs["deployer_human_oversight_according_to_instructions"] in ["No", "To be verified"]:
+            flags.append((
+                "HIGH",
+                "Article 27 deployer add-on: implementation of human oversight according to instructions is not demonstrated."
+            ))
+
+        if inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
+            flags.append((
+                "HIGH",
+                "Article 27 deployer add-on: measures in case of materialisation of risks are missing or insufficient."
             ))
 
         if inputs["monitoring"] != "Yes":
             flags.append((
                 "MEDIUM",
-                "Deployer-side add-on: post-deployment monitoring is not clearly established."
+                "Article 27 deployer add-on: post-deployment monitoring is not clearly established."
             ))
 
     return flags
@@ -761,16 +926,30 @@ def compute_scrutiny_level(inputs, flags, risks):
     ]:
         score += 3
 
+    if is_provider_role(inputs):
+        if inputs["provider_health_safety_risk"] in ["High", "Very high"]:
+            score += 2
+        if inputs["provider_fr_risk"] in ["High", "Very high"]:
+            score += 3
+        if inputs["provider_misuse_risk"] in ["High", "Very high"]:
+            score += 2
+
+    if is_deployer_role(inputs):
+        if inputs["deployment_frequency"] in ["Regular", "Continuous"]:
+            score += 2
+        if inputs["affected_categories_described"] != "Yes":
+            score += 2
+
     if len(risks) >= 5:
         score += 2
 
     if any(level == "BLOCKING" for level, _ in flags):
         score += 4
 
-    if score >= 9:
+    if score >= 11:
         return "Very high"
 
-    if score >= 6:
+    if score >= 7:
         return "High"
 
     if score >= 3:
@@ -846,16 +1025,47 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
     report.append("")
 
     if is_provider:
-        report.append("## 6A. Provider-side add-on")
+        report.append("## 6A. Provider-side AI Act Article 9 add-on")
+        report.append(
+            "This module is not a duplicate of the DPIA. It captures the provider-side "
+            "risk-management features specific to high-risk AI systems: lifecycle review, "
+            "health and safety risk, fundamental-rights risk, intended purpose, reasonably "
+            "foreseeable misuse, post-market monitoring feedback, and targeted risk-control measures."
+        )
+        report.append("")
+        report.append(f"- Continuous lifecycle review and updating: {inputs['provider_lifecycle_review']}")
+        report.append(f"- Known and foreseeable health/safety risk: {inputs['provider_health_safety_risk']}")
+        report.append(f"- Known and foreseeable fundamental-rights risk: {inputs['provider_fr_risk']}")
+        report.append(f"- Risk under intended purpose: {inputs['provider_intended_purpose_risk']}")
+        report.append(f"- Risk under reasonably foreseeable misuse: {inputs['provider_misuse_risk']}")
         report.append(f"- Reasonably foreseeable misuse assessed: {inputs['misuse_assessed']}")
-        report.append(f"- Subgroup testing: {inputs['subgroup_testing']}")
+        report.append(f"- Post-market monitoring feedback linked to risk review: {inputs['provider_post_market_link']}")
+        report.append(f"- Targeted risk-management measures adopted: {inputs['provider_targeted_measures']}")
         report.append(f"- Residual risk defined and documented: {inputs['residual_risk_defined']}")
+        report.append(f"- Provider-side notes: {inputs['provider_article9_notes']}")
         report.append("")
 
     if is_deployer:
-        report.append("## 6B. Deployer-side add-on")
+        report.append("## 6B. Deployer-side AI Act Article 27 add-on")
+        report.append(
+            "This module is not a duplicate of the DPIA. It captures the deployment-specific "
+            "features of the FRIA: deployer process, period and frequency of use, affected "
+            "categories, specific risks of harm in context, provider information, human oversight "
+            "according to instructions, and measures in case risks materialise."
+        )
+        report.append("")
+        report.append(f"- Deployer process description: {inputs['deployer_process_description']}")
+        report.append(f"- Expected period of use: {inputs['deployment_period']}")
         report.append(f"- Expected frequency of use: {inputs['deployment_frequency']}")
         report.append(f"- Affected categories described: {inputs['affected_categories_described']}")
+        report.append(f"- Provider Article 13 information used: {inputs['provider_article13_info_used']}")
+        report.append(f"- Specific risks of harm in context: {inputs['deployer_specific_harms']}")
+        report.append(
+            "- Human oversight implemented according to instructions: "
+            f"{inputs['deployer_human_oversight_according_to_instructions']}"
+        )
+        report.append(f"- Measures if risks materialise: {inputs['risk_materialisation_measures']}")
+        report.append(f"- Internal governance and complaint mechanisms: {inputs['deployer_governance_complaints']}")
         report.append(f"- Post-deployment monitoring: {inputs['monitoring']}")
         report.append("")
 
@@ -889,10 +1099,10 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
 
     report.append("## Methodological note")
     report.append(
-        "This tool does not automate constitutional judgment. "
-        "It automates the procedural conditions for better fundamental-rights reasoning: "
-        "completeness, consistency, traceability, contestability and accountability. "
-        "Provider-side and deployer-side regulatory modules are opened only when relevant to the role of the filer."
+        "This tool does not automate constitutional judgment. It uses the DPIA as the common "
+        "procedural baseline. Provider-side Article 9 questions and deployer-side Article 27 "
+        "questions are opened only when relevant to the role of the filer. Their function is to "
+        "feed the fundamental-rights risk selection layer without duplicating the DPIA."
     )
 
     return "\n".join(report)
@@ -905,21 +1115,24 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
 with st.expander("Methodological logic", expanded=False):
     st.markdown(
         """
-        This tool uses the **DPIA as the procedural baseline** and adds a deeper
-        **fundamental-rights risk selection layer**.
+        This tool uses the **DPIA as the common procedural baseline**.
 
-        The assessment is structured around:
+        It then adds a **fundamental-rights legal risk selection layer**, focused on:
         - the decision-making context;
-        - the persons and groups affected;
-        - the legal mechanisms through which harm may occur;
+        - persons and groups affected;
+        - legal mechanisms of harm;
         - necessity and proportionality;
-        - safeguards, remedies and contestability.
+        - remedies, contestability and accountability.
 
-        **Provider-side questions** are shown only when the filer is a provider
-        or a joint assessment team.
+        **Provider-side Article 9 add-on** opens only if the filer includes a provider role.
+        It first asks about health and safety risk and then connects those risks to fundamental rights.
 
-        **Deployer-side questions** are shown only when the filer is a deployer
-        or a joint assessment team.
+        **Deployer-side Article 27 add-on** opens only if the filer includes a deployer role.
+        It focuses on the specific deployment context, frequency of use, affected groups,
+        human oversight, governance and complaint mechanisms.
+
+        The add-ons are not duplicative of the DPIA: they only capture AI Act-specific features
+        that feed the fundamental-rights analysis.
         """
     )
 
@@ -1076,64 +1289,178 @@ with st.form("assessment_form"):
     )
 
     if show_provider_module:
-        st.header("6A. Provider-side add-on")
+        st.header("6A. Provider-side AI Act Article 9 add-on")
         st.caption(
-            "Opened because the filer includes a provider role. "
-            "This section supports provider-side risk-management reasoning."
+            "This section opens because the filer includes a provider role. "
+            "It captures Article 9-specific risk-management features without duplicating the DPIA."
+        )
+
+        st.markdown(
+            "**Article 9 logic:** identify and analyse known and reasonably foreseeable risks "
+            "to health, safety and fundamental rights; estimate risk under intended purpose and "
+            "foreseeable misuse; evaluate risks emerging from post-market monitoring; adopt "
+            "targeted risk-management measures."
         )
 
         col9, col10 = st.columns(2)
 
         with col9:
-            misuse_assessed = st.selectbox(
-                "Has reasonably foreseeable misuse been assessed?",
+            provider_lifecycle_review = st.selectbox(
+                "Is the risk-management system continuous, iterative and updated across the lifecycle?",
                 YES_NO_OPTIONS
             )
 
-            subgroup_testing = st.selectbox(
-                "Has testing been planned for affected subgroups?",
-                ["Yes", "No", "Partly", "Not applicable", "To be verified"]
+            provider_health_safety_risk = st.selectbox(
+                "Known or reasonably foreseeable risk to health or safety",
+                RISK_LEVELS
+            )
+
+            provider_fr_risk = st.selectbox(
+                "Known or reasonably foreseeable risk to fundamental rights",
+                RISK_LEVELS
+            )
+
+            provider_intended_purpose_risk = st.selectbox(
+                "Risk when used according to intended purpose",
+                RISK_LEVELS
             )
 
         with col10:
-            residual_risk_defined = st.selectbox(
-                "Has residual risk been defined and documented?",
+            provider_misuse_risk = st.selectbox(
+                "Risk under reasonably foreseeable misuse",
+                RISK_LEVELS
+            )
+
+            misuse_assessed = st.selectbox(
+                "Has reasonably foreseeable misuse been specifically assessed?",
                 YES_NO_OPTIONS
             )
+
+            provider_post_market_link = st.selectbox(
+                "Are risks from post-market monitoring linked back to risk review?",
+                YES_NO_OPTIONS
+            )
+
+            provider_targeted_measures = st.selectbox(
+                "Have appropriate and targeted risk-management measures been adopted?",
+                YES_NO_OPTIONS
+            )
+
+        residual_risk_defined = st.selectbox(
+            "Has residual risk been defined and documented?",
+            YES_NO_OPTIONS
+        )
+
+        provider_article9_notes = st.text_area(
+            "Provider-side Article 9 notes",
+            "",
+            placeholder=(
+                "Explain health/safety risks, fundamental-rights risks, misuse scenarios, "
+                "post-market feedback, targeted measures and residual risk."
+            )
+        )
+
     else:
+        provider_lifecycle_review = "Not applicable"
+        provider_health_safety_risk = "Not applicable"
+        provider_fr_risk = "Not applicable"
+        provider_intended_purpose_risk = "Not applicable"
+        provider_misuse_risk = "Not applicable"
         misuse_assessed = "Not applicable"
-        subgroup_testing = "Not applicable"
+        provider_post_market_link = "Not applicable"
+        provider_targeted_measures = "Not applicable"
         residual_risk_defined = "Not applicable"
+        provider_article9_notes = "Not applicable"
 
     if show_deployer_module:
-        st.header("6B. Deployer-side add-on")
+        st.header("6B. Deployer-side AI Act Article 27 add-on")
         st.caption(
-            "Opened because the filer includes a deployer role. "
-            "This section supports context-specific deployment and FRIA reasoning."
+            "This section opens because the filer includes a deployer role. "
+            "It captures deployment-specific FRIA features without duplicating the DPIA."
+        )
+
+        st.markdown(
+            "**Article 27 logic:** describe the deployer process, period and frequency of use, "
+            "categories of affected persons and groups, specific risks of harm in context, "
+            "human oversight according to instructions, and measures in case risks materialise."
+        )
+
+        deployer_process_description = st.text_area(
+            "Description of the deployer's process in which the high-risk AI system will be used",
+            "",
+            placeholder=(
+                "Describe the organisational process, decision flow, human roles and operational setting."
+            )
         )
 
         col11, col12 = st.columns(2)
 
         with col11:
+            deployment_period = st.text_input(
+                "Expected period of use",
+                "To be verified"
+            )
+
             deployment_frequency = st.selectbox(
                 "Expected frequency of use",
-                ["One-off", "Occasional", "Regular", "Continuous", "To be verified"]
+                FREQUENCY_OPTIONS
             )
 
             affected_categories_described = st.selectbox(
-                "Are categories of affected persons and groups described?",
+                "Are categories of affected natural persons and groups described?",
+                YES_NO_OPTIONS
+            )
+
+            provider_article13_info_used = st.selectbox(
+                "Has provider information/instructions been used for this assessment?",
                 YES_NO_OPTIONS
             )
 
         with col12:
+            deployer_human_oversight_according_to_instructions = st.selectbox(
+                "Is human oversight implemented according to the provider's instructions for use?",
+                YES_NO_OPTIONS
+            )
+
+            risk_materialisation_measures = st.selectbox(
+                "Are measures defined for the materialisation of risks?",
+                YES_NO_OPTIONS
+            )
+
             monitoring = st.selectbox(
                 "Is post-deployment monitoring planned?",
                 YES_NO_OPTIONS
             )
+
+        deployer_specific_harms = st.text_area(
+            "Specific risks of harm likely to affect the identified persons or groups",
+            "",
+            placeholder=(
+                "Describe specific harms in this context, taking into account provider information, "
+                "affected groups, frequency of use and organisational setting."
+            )
+        )
+
+        deployer_governance_complaints = st.text_area(
+            "Internal governance and complaint mechanisms",
+            "",
+            placeholder=(
+                "Describe internal governance, complaint channels, escalation routes, deadlines, "
+                "and measures to be taken if risks materialise."
+            )
+        )
+
     else:
+        deployer_process_description = "Not applicable"
+        deployment_period = "Not applicable"
         deployment_frequency = "Not applicable"
         affected_categories_described = "Not applicable"
+        provider_article13_info_used = "Not applicable"
+        deployer_human_oversight_according_to_instructions = "Not applicable"
+        risk_materialisation_measures = "Not applicable"
         monitoring = "Not applicable"
+        deployer_specific_harms = "Not applicable"
+        deployer_governance_complaints = "Not applicable"
 
     submitted = st.form_submit_button("Generate fundamental rights assessment")
 
@@ -1162,12 +1489,30 @@ if submitted:
         "bias_control": bias_control,
         "affected_groups_consulted": affected_groups_consulted,
         "governance_notes": governance_notes,
+
+        # Provider-side Article 9 add-on
+        "provider_lifecycle_review": provider_lifecycle_review,
+        "provider_health_safety_risk": provider_health_safety_risk,
+        "provider_fr_risk": provider_fr_risk,
+        "provider_intended_purpose_risk": provider_intended_purpose_risk,
+        "provider_misuse_risk": provider_misuse_risk,
         "misuse_assessed": misuse_assessed,
-        "subgroup_testing": subgroup_testing,
+        "provider_post_market_link": provider_post_market_link,
+        "provider_targeted_measures": provider_targeted_measures,
         "residual_risk_defined": residual_risk_defined,
+        "provider_article9_notes": provider_article9_notes,
+
+        # Deployer-side Article 27 add-on
+        "deployer_process_description": deployer_process_description,
+        "deployment_period": deployment_period,
         "deployment_frequency": deployment_frequency,
         "affected_categories_described": affected_categories_described,
-        "monitoring": monitoring
+        "provider_article13_info_used": provider_article13_info_used,
+        "deployer_human_oversight_according_to_instructions": deployer_human_oversight_according_to_instructions,
+        "risk_materialisation_measures": risk_materialisation_measures,
+        "monitoring": monitoring,
+        "deployer_specific_harms": deployer_specific_harms,
+        "deployer_governance_complaints": deployer_governance_complaints
     }
 
     risks = activate_fundamental_rights_risks(inputs)
