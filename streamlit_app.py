@@ -20,6 +20,13 @@ st.caption(
     "with role-specific AI Act add-ons for providers and deployers."
 )
 
+st.markdown(
+    """
+    **Created by F. Paolucci for DIGCON — FIS-funded project, at Baffi Centre, Bocconi University**  
+    **All rights reserved**
+    """
+)
+
 
 # ---------------------------------------------------------------------
 # OPTIONS
