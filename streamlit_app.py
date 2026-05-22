@@ -1535,7 +1535,7 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
         "how risks are selected, prioritised, mitigated and justified."
     )
     report.append("")
-    
+
     report.append("## 7. Red flags")
     if not flags:
         report.append("No red flags detected.")
@@ -2324,6 +2324,10 @@ if submitted:
 # OUTPUT
 # ---------------------------------------------------------------------
 
+# ---------------------------------------------------------------------
+# OUTPUT
+# ---------------------------------------------------------------------
+
 if "last_assessment" in st.session_state:
     result = st.session_state["last_assessment"]
 
@@ -2357,7 +2361,7 @@ if "last_assessment" in st.session_state:
             else:
                 st.info(f"{level}: {message}")
 
-        st.subheader("Operational Fundamental Rights Risk Register")
+    st.subheader("Operational Fundamental Rights Risk Register")
 
     if result["risks"]:
         operational_register = build_operational_risk_register(
@@ -2381,7 +2385,7 @@ if "last_assessment" in st.session_state:
     else:
         st.info("No mitigation action plan generated.")
 
-       st.subheader("Download report")
+    st.subheader("Download report")
 
     safe_file_name = (
         result["inputs"]["project_name"]
