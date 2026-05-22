@@ -197,6 +197,23 @@ CONTESTABILITY_MEASURES = [
     "None / to be defined"
 ]
 
+GOVERNANCE_DECISIONS = [
+    "GO",
+    "CONDITIONAL GO",
+    "REDESIGN REQUIRED",
+    "NO-GO",
+    "ESCALATE FOR REVIEW",
+    "To be decided"
+]
+
+ACTION_STATUSES = [
+    "To be started",
+    "In progress",
+    "Completed",
+    "Not applicable",
+    "Blocked"
+]
+
 
 # ---------------------------------------------------------------------
 # FUNDAMENTAL RIGHTS RISK CATALOGUE
@@ -206,11 +223,7 @@ RISK_CATALOG = [
     {
         "id": "FR1",
         "risk": "Excessive or disproportionate data processing",
-        "rights": [
-            "Privacy",
-            "Data protection",
-            "Informational self-determination"
-        ],
+        "rights": ["Privacy", "Data protection", "Informational self-determination"],
         "triggers": {
             "data_categories": [
                 "Common personal data",
@@ -246,11 +259,7 @@ RISK_CATALOG = [
     {
         "id": "FR2",
         "risk": "Direct, indirect or proxy discrimination",
-        "rights": [
-            "Equality",
-            "Non-discrimination",
-            "Equal access to opportunities"
-        ],
+        "rights": ["Equality", "Non-discrimination", "Equal access to opportunities"],
         "triggers": {
             "contexts": [
                 "Employment/HR",
@@ -297,12 +306,7 @@ RISK_CATALOG = [
     {
         "id": "FR3",
         "risk": "Decision-making opacity and insufficient explanation",
-        "rights": [
-            "Transparency",
-            "Effective remedy",
-            "Defence rights",
-            "Good administration"
-        ],
+        "rights": ["Transparency", "Effective remedy", "Defence rights", "Good administration"],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
@@ -339,12 +343,7 @@ RISK_CATALOG = [
     {
         "id": "FR4",
         "risk": "Ineffective or merely formal human oversight",
-        "rights": [
-            "Accountability",
-            "Effective remedy",
-            "Due process",
-            "Good administration"
-        ],
+        "rights": ["Accountability", "Effective remedy", "Due process", "Good administration"],
         "triggers": {
             "actions": [
                 "Recommendation",
@@ -381,12 +380,7 @@ RISK_CATALOG = [
     {
         "id": "FR5",
         "risk": "Exclusion from essential goods, services or opportunities",
-        "rights": [
-            "Access to services",
-            "Substantive equality",
-            "Dignity",
-            "Effective remedy"
-        ],
+        "rights": ["Access to services", "Substantive equality", "Dignity", "Effective remedy"],
         "triggers": {
             "contexts": [
                 "Employment/HR",
@@ -521,9 +515,7 @@ RISK_CATALOG = [
             "Contestability"
         ],
         "triggers": {
-            "contexts": [
-                "Platforms/content"
-            ],
+            "contexts": ["Platforms/content"],
             "actions": [
                 "Content moderation/ranking",
                 "Recommendation",
@@ -555,11 +547,7 @@ RISK_CATALOG = [
     {
         "id": "FR9",
         "risk": "Accountability gap and unclear allocation of responsibilities",
-        "rights": [
-            "Accountability",
-            "Effective remedy",
-            "Effective protection of rights"
-        ],
+        "rights": ["Accountability", "Effective remedy", "Effective protection of rights"],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
@@ -593,12 +581,7 @@ RISK_CATALOG = [
     {
         "id": "FR10",
         "risk": "Ineffective remedy or impossibility of contestation",
-        "rights": [
-            "Effective remedy",
-            "Due process",
-            "Defence rights",
-            "Good administration"
-        ],
+        "rights": ["Effective remedy", "Due process", "Defence rights", "Good administration"],
         "triggers": {
             "actions": [
                 "Scoring/ranking",
@@ -700,6 +683,116 @@ def is_deployer_role(inputs):
 
 def no_measure_selected(measures):
     return "None / to be defined" in measures or len(measures) == 0
+
+
+def is_missing_text(value):
+    return value is None or str(value).strip() == ""
+
+
+def compute_dpia_completeness(inputs):
+    checks = [
+        ("Purpose described", not is_missing_text(inputs["purpose"])),
+        ("Processing operation described", not is_missing_text(inputs["processing_description"])),
+        ("Operational context described", not is_missing_text(inputs["processing_context"])),
+        ("Legal basis identified", inputs["legal_basis"] not in ["To be determined", "Not applicable / to be verified"]),
+        ("Purpose specificity assessed", inputs["purpose_specificity"] == "Yes"),
+        ("Legal basis adequacy assessed", inputs["legal_basis_adequacy"] == "Yes"),
+        ("Purpose compatibility assessed", inputs["purpose_compatibility"] in ["Yes", "Not applicable"]),
+        ("Data categories selected", len(inputs["data_categories"]) > 0),
+        ("Data sources selected", len(inputs["data_sources"]) > 0),
+        ("Data minimisation assessed", inputs["data_minimisation"] == "Yes"),
+        ("Retention limits defined", inputs["retention_limits"] == "Yes"),
+        ("Data subjects identified", len(inputs["data_subjects"]) > 0),
+        ("Vulnerability reasoning provided", inputs["vulnerable_subjects"] != "Yes" or not is_missing_text(inputs["vulnerability_reasoning"])),
+        ("Transparency ensured", inputs["transparency_notice"] == "Yes"),
+        ("Data-subject rights operationalised", "None / to be defined" not in inputs["data_subject_rights"]),
+        ("Less intrusive alternatives assessed", inputs["alternatives_assessed"] == "Yes"),
+        ("Necessity reasoning provided", not is_missing_text(inputs["necessity_reasoning"])),
+        ("Proportionality reasoning provided", not is_missing_text(inputs["proportionality_reasoning"])),
+        ("DPIA risk described", not is_missing_text(inputs["dpia_risk_description"]))
+    ]
+
+    completed = sum(1 for _, ok in checks if ok)
+    total = len(checks)
+    score = round((completed / total) * 100)
+
+    missing = [name for name, ok in checks if not ok]
+
+    return score, missing
+
+
+def compute_coherence_warnings(inputs):
+    warnings = []
+
+    sensitive_contexts = {
+        "Employment/HR",
+        "Education",
+        "Credit/insurance",
+        "Welfare/public services",
+        "Healthcare",
+        "Justice/policing/migration"
+    }
+
+    vulnerable_groups = {
+        "Children",
+        "Migrants/asylum seekers",
+        "Persons with disabilities",
+        "Protected or vulnerable groups",
+        "Welfare beneficiaries",
+        "Patients"
+    }
+
+    risky_actions = {
+        "Scoring/ranking",
+        "Classification",
+        "Exclusion/de-prioritisation",
+        "Risk prediction",
+        "Monitoring/surveillance",
+        "Identity verification/biometrics"
+    }
+
+    if inputs["decision_effect"] == "No significant effect":
+        if set(inputs["contexts"]).intersection(sensitive_contexts):
+            warnings.append(
+                "Coherence warning: 'No significant effect' was selected, but the deployment context is sensitive."
+            )
+
+        if set(inputs["groups"]).intersection(vulnerable_groups) or inputs["vulnerable_subjects"] == "Yes":
+            warnings.append(
+                "Coherence warning: 'No significant effect' was selected, but vulnerable persons or groups are involved."
+            )
+
+        if set(inputs["actions"]).intersection(risky_actions):
+            warnings.append(
+                "Coherence warning: 'No significant effect' was selected, but the system action may affect persons or opportunities."
+            )
+
+        if inputs["power_asymmetry"] == "Yes":
+            warnings.append(
+                "Coherence warning: 'No significant effect' was selected despite a significant power asymmetry."
+            )
+
+    if inputs["dpia_risk_to_rights"] == "Low" and inputs["dpia_high_risk"] == "Yes":
+        warnings.append(
+            "Coherence warning: baseline DPIA risk is marked as Low, but the processing is also marked as likely high-risk after safeguards."
+        )
+
+    if inputs["data_quality_residual_risk"] == "Low" and no_measure_selected(inputs["data_quality_measures"]):
+        warnings.append(
+            "Coherence warning: residual data-quality risk is Low, but no concrete data-quality measures are defined."
+        )
+
+    if inputs["human_oversight_residual_risk"] == "Low" and no_measure_selected(inputs["human_oversight_measures"]):
+        warnings.append(
+            "Coherence warning: residual human-oversight risk is Low, but no concrete oversight measures are defined."
+        )
+
+    if inputs["contestability_residual_risk"] == "Low" and no_measure_selected(inputs["contestability_measures"]):
+        warnings.append(
+            "Coherence warning: residual contestability risk is Low, but no concrete contestability measures are defined."
+        )
+
+    return warnings
 
 
 def activate_fundamental_rights_risks(inputs):
@@ -820,211 +913,16 @@ def activate_fundamental_rights_risks(inputs):
 
     return activated
 
+
 def classify_risk_source(risk_id):
     if risk_id.startswith("FR-A9"):
         return "Article 9 provider add-on"
     if risk_id.startswith("FR-A27"):
         return "Article 27 deployer add-on"
-    if risk_id in ["FR1"]:
+    if risk_id == "FR1":
         return "DPIA data-processing layer"
-    if risk_id in ["FR2", "FR3", "FR4", "FR5", "FR6", "FR7", "FR8", "FR9", "FR10", "FR11"]:
-        return "Fundamental-rights legal risk layer"
-    return "Integrated assessment"
+    return "Fundamental-rights legal risk layer"
 
-
-def compute_risk_priority(risk, inputs, flags):
-    risk_id = risk["ID"]
-
-    significant_decision = inputs["decision_effect"] in [
-        "Legal or similarly significant effect",
-        "Access/exclusion/priority in services or opportunities"
-    ]
-
-    vulnerable_context = (
-        inputs["vulnerable_subjects"] == "Yes"
-        or inputs["power_asymmetry"] == "Yes"
-        or any(group in inputs["groups"] for group in [
-            "Children",
-            "Migrants/asylum seekers",
-            "Persons with disabilities",
-            "Protected or vulnerable groups",
-            "Welfare beneficiaries",
-            "Patients"
-        ])
-    )
-
-    blocking_flags = [message for level, message in flags if level == "BLOCKING"]
-    high_flags = [message for level, message in flags if level == "HIGH"]
-
-    if risk_id in ["FR10", "FR4"] and significant_decision:
-        if inputs["contestability"] != "Yes" or inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
-            return "Very high"
-
-    if risk_id == "FR2":
-        if inputs["bias_control"] in ["No", "To be verified"] or inputs["data_quality_residual_risk"] in ["High", "Very high"]:
-            return "Very high"
-
-    if risk_id in ["FR5", "FR-A27-MATERIALISATION"]:
-        if inputs["fallback_channel"] in ["No", "To be verified"] or inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
-            return "Very high"
-
-    if risk_id.startswith("FR-A9"):
-        if inputs["provider_health_safety_risk"] in ["High", "Very high"] or inputs["provider_fr_risk"] in ["High", "Very high"]:
-            return "High"
-
-    if vulnerable_context and significant_decision:
-        return "High"
-
-    if blocking_flags:
-        return "High"
-
-    if high_flags:
-        return "High"
-
-    return "Medium"
-
-
-def suggested_actions_for_risk(risk_id):
-    action_map = {
-        "FR1": [
-            ("Review data minimisation and retention", "Data inventory; minimisation memo; retention schedule"),
-            ("Verify data-subject rights workflow", "Rights request procedure; response-time evidence")
-        ],
-        "FR2": [
-            ("Perform bias and proxy-variable analysis", "Bias testing report; subgroup performance analysis"),
-            ("Review representativeness of datasets", "Dataset documentation; representativeness assessment")
-        ],
-        "FR3": [
-            ("Prepare meaningful explanation of outcome", "Explanation template; decision criteria documentation"),
-            ("Document role of AI in the decision", "Transparency notice; internal decision-flow map")
-        ],
-        "FR4": [
-            ("Strengthen human oversight", "Human oversight procedure; override protocol"),
-            ("Train reviewers against automation bias", "Training material; attendance log; review audit")
-        ],
-        "FR5": [
-            ("Create fallback or alternative access channel", "Fallback procedure; escalation workflow"),
-            ("Define urgent review for adverse outcomes", "Review deadlines; escalation matrix")
-        ],
-        "FR6": [
-            ("Limit monitoring scope and duration", "Monitoring policy; purpose limitation statement"),
-            ("Assess chilling-effect risk", "Impact analysis; user/stakeholder consultation evidence")
-        ],
-        "FR7": [
-            ("Review profiling and labelling logic", "Profile taxonomy; label-risk review"),
-            ("Enable correction or challenge of classification", "Correction workflow; appeal procedure")
-        ],
-        "FR8": [
-            ("Audit content ranking or moderation effects", "Moderation/ranking audit; over-removal analysis"),
-            ("Create effective appeal for content decisions", "Appeal workflow; user notice")
-        ],
-        "FR9": [
-            ("Create accountability matrix", "RACI matrix; internal governance document"),
-            ("Define escalation and audit trail", "Escalation procedure; logging policy")
-        ],
-        "FR10": [
-            ("Create accessible complaint mechanism", "Complaint workflow; public/internal instructions"),
-            ("Ensure remedy can change the outcome", "Review powers; reversal/correction procedure")
-        ],
-        "FR11": [
-            ("Perform safety and adverse-event testing", "Safety testing report; incident logs"),
-            ("Define emergency fallback and escalation", "Incident response plan; emergency override procedure")
-        ],
-        "FR-A9-HS": [
-            ("Adopt targeted health/safety risk-control measures", "Safety risk register; targeted mitigation plan"),
-            ("Link safety incidents to lifecycle risk review", "Lifecycle review log; post-market monitoring evidence")
-        ],
-        "FR-A9-MISUSE": [
-            ("Assess and document foreseeable misuse scenarios", "Misuse analysis; use restriction documentation"),
-            ("Add guardrails and instructions for use", "Instructions for use; technical/organisational guardrails")
-        ],
-        "FR-A27-SCALE": [
-            ("Monitor cumulative impact of repeated deployment", "Periodic review report; complaint trend analysis"),
-            ("Define suspension trigger for cumulative harm", "Suspension criteria; governance decision log")
-        ],
-        "FR-A27-MATERIALISATION": [
-            ("Define measures if risks materialise", "Incident response plan; complaint escalation workflow"),
-            ("Assign internal governance owner", "RACI matrix; owner appointment; response deadlines")
-        ]
-    }
-
-    return action_map.get(
-        risk_id,
-        [("Perform manual legal review", "Legal assessment note; governance decision")]
-    )
-
-
-def build_operational_risk_register(risks, inputs, flags):
-    rows = []
-
-    for risk in risks:
-        risk_id = risk["ID"]
-        rows.append({
-            "Risk ID": risk_id,
-            "Risk source": classify_risk_source(risk_id),
-            "Priority": compute_risk_priority(risk, inputs, flags),
-            "Fundamental rights risk": risk["Fundamental rights risk"],
-            "Rights involved": risk["Rights involved"],
-            "Triggered by": risk["Triggered by"],
-            "Required safeguards to test": risk["Safeguards to test"],
-            "Residual risk reference": (
-                "Data quality: "
-                + inputs["data_quality_residual_risk"]
-                + " | Human oversight: "
-                + inputs["human_oversight_residual_risk"]
-                + " | Contestability: "
-                + inputs["contestability_residual_risk"]
-            ),
-            "Assessment status": "Open"
-        })
-
-    return pd.DataFrame(rows)
-
-
-def build_mitigation_action_plan(risks, inputs, flags):
-    rows = []
-
-    for risk in risks:
-        risk_id = risk["ID"]
-        priority = compute_risk_priority(risk, inputs, flags)
-        actions = suggested_actions_for_risk(risk_id)
-
-        for action, evidence in actions:
-            rows.append({
-                "Risk ID": risk_id,
-                "Priority": priority,
-                "Action required": action,
-                "Evidence to collect": evidence,
-                "Suggested owner": suggest_owner_for_action(action),
-                "Status": "To be started",
-                "Deadline": "To be defined"
-            })
-
-    return pd.DataFrame(rows)
-
-
-def suggest_owner_for_action(action):
-    action_lower = action.lower()
-
-    if "data" in action_lower or "dataset" in action_lower or "minimisation" in action_lower:
-        return "DPO / Data governance lead"
-
-    if "bias" in action_lower or "subgroup" in action_lower or "testing" in action_lower:
-        return "AI governance / Model validation team"
-
-    if "human oversight" in action_lower or "reviewer" in action_lower or "override" in action_lower:
-        return "Business process owner / Human oversight lead"
-
-    if "complaint" in action_lower or "remedy" in action_lower or "appeal" in action_lower:
-        return "Legal / Complaints handling team"
-
-    if "safety" in action_lower or "incident" in action_lower or "emergency" in action_lower:
-        return "Risk management / Safety owner"
-
-    if "accountability" in action_lower or "governance" in action_lower or "raci" in action_lower:
-        return "AI governance officer"
-
-    return "Assessment owner"
 
 def compute_red_flags(inputs, risks):
     flags = []
@@ -1048,73 +946,40 @@ def compute_red_flags(inputs, risks):
         flags.append(("BLOCKING", "DPIA core: legal basis is not clearly identified."))
 
     if inputs["purpose_specificity"] in ["No", "To be verified"]:
-        flags.append((
-            "BLOCKING",
-            "DPIA core: the purpose is not sufficiently specific, explicit and determined."
-        ))
+        flags.append(("BLOCKING", "DPIA core: the purpose is not sufficiently specific, explicit and determined."))
 
     if inputs["legal_basis_adequacy"] in ["No", "To be verified"]:
-        flags.append((
-            "BLOCKING",
-            "DPIA core: the adequacy of the legal basis is not demonstrated."
-        ))
+        flags.append(("BLOCKING", "DPIA core: the adequacy of the legal basis is not demonstrated."))
 
     if inputs["purpose_compatibility"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "DPIA core: purpose compatibility or further-processing compatibility is not sufficiently assessed."
-        ))
+        flags.append(("HIGH", "DPIA core: purpose compatibility or further-processing compatibility is not sufficiently assessed."))
 
     if set(inputs["data_categories"]).intersection(sensitive_data) and inputs["data_necessary"] != "Yes":
-        flags.append((
-            "HIGH",
-            "DPIA core: sensitive, biometric or children's data are used without a strict necessity justification."
-        ))
+        flags.append(("HIGH", "DPIA core: sensitive, biometric or children's data are used without a strict necessity justification."))
 
     if inputs["data_minimisation"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "DPIA core: data minimisation is not sufficiently demonstrated."
-        ))
+        flags.append(("HIGH", "DPIA core: data minimisation is not sufficiently demonstrated."))
 
     if inputs["retention_limits"] in ["No", "To be verified"]:
-        flags.append((
-            "MEDIUM",
-            "DPIA core: storage limitation and deletion periods are not clearly defined."
-        ))
+        flags.append(("MEDIUM", "DPIA core: storage limitation and deletion periods are not clearly defined."))
 
     if inputs["vulnerable_subjects"] == "Yes" and not inputs["vulnerability_reasoning"].strip():
-        flags.append((
-            "HIGH",
-            "DPIA core: vulnerable persons or groups are involved but vulnerability reasoning is missing."
-        ))
+        flags.append(("HIGH", "DPIA core: vulnerable persons or groups are involved but vulnerability reasoning is missing."))
 
     if inputs["power_asymmetry"] == "Yes" and not inputs["vulnerability_reasoning"].strip():
-        flags.append((
-            "HIGH",
-            "DPIA core: power asymmetry is present but not explained."
-        ))
+        flags.append(("HIGH", "DPIA core: power asymmetry is present but not explained."))
 
     if inputs["transparency_notice"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "DPIA core: transparency towards affected persons is not sufficiently ensured."
-        ))
+        flags.append(("HIGH", "DPIA core: transparency towards affected persons is not sufficiently ensured."))
 
     if "None / to be defined" in inputs["data_subject_rights"]:
-        flags.append((
-            "HIGH",
-            "DPIA core: data-subject rights are not operationally supported."
-        ))
+        flags.append(("HIGH", "DPIA core: data-subject rights are not operationally supported."))
 
     if inputs["alternatives_assessed"] in ["No", "To be verified"]:
         flags.append(("HIGH", "DPIA core: less intrusive alternatives have not been sufficiently assessed."))
 
     if inputs["dpia_high_risk"] == "Yes":
-        flags.append((
-            "HIGH",
-            "DPIA core: processing remains likely to result in high risk after initial safeguards."
-        ))
+        flags.append(("HIGH", "DPIA core: processing remains likely to result in high risk after initial safeguards."))
 
     if inputs["data_quality_assessed"] in ["No", "To be verified"]:
         flags.append(("HIGH", "Mitigation layer: data quality has not been sufficiently assessed."))
@@ -1126,22 +991,13 @@ def compute_red_flags(inputs, risks):
         flags.append(("HIGH", "Mitigation layer: residual risk after data quality measures remains high."))
 
     if "FR2" in risk_ids and inputs["bias_control"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "Mitigation layer: discrimination risk is present, but bias/proxy-control safeguards are not sufficiently demonstrated."
-        ))
+        flags.append(("HIGH", "Mitigation layer: discrimination risk is present, but bias/proxy-control safeguards are not sufficiently demonstrated."))
 
     if significant_decision and inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "Mitigation layer: human oversight is absent, merely formal or insufficiently demonstrated in a significant decision-making context."
-        ))
+        flags.append(("HIGH", "Mitigation layer: human oversight is absent, merely formal or insufficiently demonstrated in a significant decision-making context."))
 
     if significant_decision and no_measure_selected(inputs["human_oversight_measures"]):
-        flags.append((
-            "HIGH",
-            "Mitigation layer: human oversight measures are missing or still to be defined in a significant decision-making context."
-        ))
+        flags.append(("HIGH", "Mitigation layer: human oversight measures are missing or still to be defined in a significant decision-making context."))
 
     if inputs["human_oversight_residual_risk"] in ["High", "Very high"]:
         flags.append(("HIGH", "Mitigation layer: residual risk after human oversight measures remains high."))
@@ -1153,10 +1009,7 @@ def compute_red_flags(inputs, risks):
         flags.append(("HIGH", "Mitigation layer: the remedy is not shown to be capable of changing the outcome."))
 
     if significant_decision and no_measure_selected(inputs["contestability_measures"]):
-        flags.append((
-            "BLOCKING",
-            "Mitigation layer: contestability measures are missing or still to be defined in a significant decision-making context."
-        ))
+        flags.append(("BLOCKING", "Mitigation layer: contestability measures are missing or still to be defined in a significant decision-making context."))
 
     if inputs["contestability_residual_risk"] in ["High", "Very high"]:
         flags.append(("HIGH", "Mitigation layer: residual risk after contestability measures remains high."))
@@ -1165,81 +1018,45 @@ def compute_red_flags(inputs, risks):
         flags.append(("HIGH", "Mitigation layer: a remedy risk is present, but remedy effectiveness is not demonstrated."))
 
     if "FR5" in risk_ids and inputs["fallback_channel"] in ["No", "To be verified"]:
-        flags.append((
-            "HIGH",
-            "Mitigation layer: potential exclusion from services or opportunities is present without a reliable fallback channel."
-        ))
+        flags.append(("HIGH", "Mitigation layer: potential exclusion from services or opportunities is present without a reliable fallback channel."))
 
     if not inputs["accountability_owner"].strip():
         flags.append(("HIGH", "Accountability: internal accountability owner is missing."))
 
     if is_provider_role(inputs):
         if inputs["provider_lifecycle_review"] in ["No", "To be verified"]:
-            flags.append((
-                "MEDIUM",
-                "Article 9 provider add-on: lifecycle review and updating are not clearly established."
-            ))
+            flags.append(("MEDIUM", "Article 9 provider add-on: lifecycle review and updating are not clearly established."))
 
         if inputs["provider_health_safety_risk"] in ["High", "Very high"] and inputs["provider_targeted_measures"] != "Yes":
-            flags.append((
-                "HIGH",
-                "Article 9 provider add-on: high health/safety risk without targeted risk-management measures."
-            ))
+            flags.append(("HIGH", "Article 9 provider add-on: high health/safety risk without targeted risk-management measures."))
 
         if inputs["provider_fr_risk"] in ["High", "Very high"] and inputs["provider_targeted_measures"] != "Yes":
-            flags.append((
-                "HIGH",
-                "Article 9 provider add-on: high fundamental-rights risk without targeted risk-management measures."
-            ))
+            flags.append(("HIGH", "Article 9 provider add-on: high fundamental-rights risk without targeted risk-management measures."))
 
         if inputs["provider_misuse_risk"] in ["High", "Very high"] and inputs["misuse_assessed"] != "Yes":
-            flags.append((
-                "HIGH",
-                "Article 9 provider add-on: high misuse risk is not sufficiently assessed."
-            ))
+            flags.append(("HIGH", "Article 9 provider add-on: high misuse risk is not sufficiently assessed."))
 
         if inputs["provider_post_market_link"] in ["No", "To be verified"]:
-            flags.append((
-                "MEDIUM",
-                "Article 9 provider add-on: post-market monitoring feedback is not linked to risk review."
-            ))
+            flags.append(("MEDIUM", "Article 9 provider add-on: post-market monitoring feedback is not linked to risk review."))
 
     if is_deployer_role(inputs):
         if inputs["deployer_process_description"].strip() == "":
-            flags.append((
-                "HIGH",
-                "Article 27 deployer add-on: the deployer's process in which the AI system will be used is not described."
-            ))
+            flags.append(("HIGH", "Article 27 deployer add-on: the deployer's process in which the AI system will be used is not described."))
 
         if inputs["affected_categories_described"] != "Yes":
-            flags.append((
-                "HIGH",
-                "Article 27 deployer add-on: affected persons and groups are not sufficiently described."
-            ))
+            flags.append(("HIGH", "Article 27 deployer add-on: affected persons and groups are not sufficiently described."))
 
         if inputs["provider_article13_info_used"] in ["No", "To be verified"]:
-            flags.append((
-                "MEDIUM",
-                "Article 27 deployer add-on: provider information/instructions have not been used or verified."
-            ))
+            flags.append(("MEDIUM", "Article 27 deployer add-on: provider information/instructions have not been used or verified."))
 
         if inputs["deployer_human_oversight_according_to_instructions"] in ["No", "To be verified"]:
-            flags.append((
-                "HIGH",
-                "Article 27 deployer add-on: implementation of human oversight according to instructions is not demonstrated."
-            ))
+            flags.append(("HIGH", "Article 27 deployer add-on: implementation of human oversight according to instructions is not demonstrated."))
 
         if inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
-            flags.append((
-                "HIGH",
-                "Article 27 deployer add-on: measures in case of materialisation of risks are missing or insufficient."
-            ))
+            flags.append(("HIGH", "Article 27 deployer add-on: measures in case of materialisation of risks are missing or insufficient."))
 
         if inputs["monitoring"] != "Yes":
-            flags.append((
-                "MEDIUM",
-                "Article 27 deployer add-on: post-deployment monitoring is not clearly established."
-            ))
+            flags.append(("MEDIUM", "Article 27 deployer add-on: post-deployment monitoring is not clearly established."))
 
     return flags
 
@@ -1247,18 +1064,8 @@ def compute_red_flags(inputs, risks):
 def compute_scrutiny_level(inputs, flags, risks):
     score = 0
 
-    high_contexts = {
-        "Employment/HR",
-        "Education",
-        "Credit/insurance",
-        "Welfare/public services",
-        "Healthcare"
-    }
-
-    very_high_contexts = {
-        "Justice/policing/migration"
-    }
-
+    high_contexts = {"Employment/HR", "Education", "Credit/insurance", "Welfare/public services", "Healthcare"}
+    very_high_contexts = {"Justice/policing/migration"}
     vulnerable_groups = {
         "Children",
         "Migrants/asylum seekers",
@@ -1267,12 +1074,7 @@ def compute_scrutiny_level(inputs, flags, risks):
         "Welfare beneficiaries",
         "Patients"
     }
-
-    sensitive_data = {
-        "Special categories of data",
-        "Biometric data",
-        "Children's data"
-    }
+    sensitive_data = {"Special categories of data", "Biometric data", "Children's data"}
 
     if set(inputs["contexts"]).intersection(high_contexts):
         score += 2
@@ -1286,10 +1088,7 @@ def compute_scrutiny_level(inputs, flags, risks):
     if set(inputs["data_categories"]).intersection(sensitive_data):
         score += 3
 
-    if inputs["decision_effect"] in [
-        "Legal or similarly significant effect",
-        "Access/exclusion/priority in services or opportunities"
-    ]:
+    if inputs["decision_effect"] in ["Legal or similarly significant effect", "Access/exclusion/priority in services or opportunities"]:
         score += 3
 
     if inputs["dpia_risk_to_rights"] in ["High", "Very high"]:
@@ -1363,7 +1162,214 @@ def compute_outcome(flags, scrutiny_level):
     return "GO"
 
 
-def build_report(inputs, risks, flags, scrutiny_level, outcome):
+def compute_risk_priority(risk, inputs, flags):
+    risk_id = risk["ID"]
+
+    significant_decision = inputs["decision_effect"] in [
+        "Legal or similarly significant effect",
+        "Access/exclusion/priority in services or opportunities"
+    ]
+
+    vulnerable_context = (
+        inputs["vulnerable_subjects"] == "Yes"
+        or inputs["power_asymmetry"] == "Yes"
+        or any(group in inputs["groups"] for group in [
+            "Children",
+            "Migrants/asylum seekers",
+            "Persons with disabilities",
+            "Protected or vulnerable groups",
+            "Welfare beneficiaries",
+            "Patients"
+        ])
+    )
+
+    has_blocking = any(level == "BLOCKING" for level, _ in flags)
+    has_high = any(level == "HIGH" for level, _ in flags)
+
+    if risk_id in ["FR10", "FR4"] and significant_decision:
+        if inputs["contestability"] != "Yes" or inputs["human_oversight"] in ["Absent", "Merely formal", "To be verified"]:
+            return "Very high"
+
+    if risk_id == "FR2":
+        if inputs["bias_control"] in ["No", "To be verified"] or inputs["data_quality_residual_risk"] in ["High", "Very high"]:
+            return "Very high"
+
+    if risk_id in ["FR5", "FR-A27-MATERIALISATION"]:
+        if inputs["fallback_channel"] in ["No", "To be verified"] or inputs["risk_materialisation_measures"] in ["No", "To be verified"]:
+            return "Very high"
+
+    if risk_id.startswith("FR-A9"):
+        if inputs["provider_health_safety_risk"] in ["High", "Very high"] or inputs["provider_fr_risk"] in ["High", "Very high"]:
+            return "High"
+
+    if vulnerable_context and significant_decision:
+        return "High"
+
+    if has_blocking or has_high:
+        return "High"
+
+    return "Medium"
+
+
+def suggested_actions_for_risk(risk_id):
+    action_map = {
+        "FR1": [
+            ("Review data minimisation and retention", "Data inventory; minimisation memo; retention schedule"),
+            ("Verify data-subject rights workflow", "Rights request procedure; response-time evidence")
+        ],
+        "FR2": [
+            ("Perform bias and proxy-variable analysis", "Bias testing report; subgroup performance analysis"),
+            ("Review representativeness of datasets", "Dataset documentation; representativeness assessment")
+        ],
+        "FR3": [
+            ("Prepare meaningful explanation of outcome", "Explanation template; decision criteria documentation"),
+            ("Document role of AI in the decision", "Transparency notice; internal decision-flow map")
+        ],
+        "FR4": [
+            ("Strengthen human oversight", "Human oversight procedure; override protocol"),
+            ("Train reviewers against automation bias", "Training material; attendance log; review audit")
+        ],
+        "FR5": [
+            ("Create fallback or alternative access channel", "Fallback procedure; escalation workflow"),
+            ("Define urgent review for adverse outcomes", "Review deadlines; escalation matrix")
+        ],
+        "FR6": [
+            ("Limit monitoring scope and duration", "Monitoring policy; purpose limitation statement"),
+            ("Assess chilling-effect risk", "Impact analysis; stakeholder consultation evidence")
+        ],
+        "FR7": [
+            ("Review profiling and labelling logic", "Profile taxonomy; label-risk review"),
+            ("Enable correction or challenge of classification", "Correction workflow; appeal procedure")
+        ],
+        "FR8": [
+            ("Audit content ranking or moderation effects", "Moderation/ranking audit; over-removal analysis"),
+            ("Create effective appeal for content decisions", "Appeal workflow; user notice")
+        ],
+        "FR9": [
+            ("Create accountability matrix", "RACI matrix; internal governance document"),
+            ("Define escalation and audit trail", "Escalation procedure; logging policy")
+        ],
+        "FR10": [
+            ("Create accessible complaint mechanism", "Complaint workflow; public/internal instructions"),
+            ("Ensure remedy can change the outcome", "Review powers; reversal/correction procedure")
+        ],
+        "FR11": [
+            ("Perform safety and adverse-event testing", "Safety testing report; incident logs"),
+            ("Define emergency fallback and escalation", "Incident response plan; emergency override procedure")
+        ],
+        "FR-A9-HS": [
+            ("Adopt targeted health/safety risk-control measures", "Safety risk register; targeted mitigation plan"),
+            ("Link safety incidents to lifecycle risk review", "Lifecycle review log; post-market monitoring evidence")
+        ],
+        "FR-A9-MISUSE": [
+            ("Assess and document foreseeable misuse scenarios", "Misuse analysis; use restriction documentation"),
+            ("Add guardrails and instructions for use", "Instructions for use; technical/organisational guardrails")
+        ],
+        "FR-A27-SCALE": [
+            ("Monitor cumulative impact of repeated deployment", "Periodic review report; complaint trend analysis"),
+            ("Define suspension trigger for cumulative harm", "Suspension criteria; governance decision log")
+        ],
+        "FR-A27-MATERIALISATION": [
+            ("Define measures if risks materialise", "Incident response plan; complaint escalation workflow"),
+            ("Assign internal governance owner", "RACI matrix; owner appointment; response deadlines")
+        ]
+    }
+
+    return action_map.get(risk_id, [("Perform manual legal review", "Legal assessment note; governance decision")])
+
+
+def suggest_owner_for_action(action):
+    action_lower = action.lower()
+
+    if "data" in action_lower or "dataset" in action_lower or "minimisation" in action_lower:
+        return "DPO / Data governance lead"
+
+    if "bias" in action_lower or "subgroup" in action_lower or "testing" in action_lower:
+        return "AI governance / Model validation team"
+
+    if "human oversight" in action_lower or "reviewer" in action_lower or "override" in action_lower:
+        return "Business process owner / Human oversight lead"
+
+    if "complaint" in action_lower or "remedy" in action_lower or "appeal" in action_lower:
+        return "Legal / Complaints handling team"
+
+    if "safety" in action_lower or "incident" in action_lower or "emergency" in action_lower:
+        return "Risk management / Safety owner"
+
+    if "accountability" in action_lower or "governance" in action_lower or "raci" in action_lower:
+        return "AI governance officer"
+
+    return "Assessment owner"
+
+
+def build_operational_risk_register(risks, inputs, flags):
+    rows = []
+
+    for risk in risks:
+        risk_id = risk["ID"]
+        rows.append({
+            "Risk ID": risk_id,
+            "Risk source": classify_risk_source(risk_id),
+            "Priority": compute_risk_priority(risk, inputs, flags),
+            "Fundamental rights risk": risk["Fundamental rights risk"],
+            "Rights involved": risk["Rights involved"],
+            "Triggered by": risk["Triggered by"],
+            "Required safeguards to test": risk["Safeguards to test"],
+            "Residual risk reference": (
+                "Data quality: "
+                + inputs["data_quality_residual_risk"]
+                + " | Human oversight: "
+                + inputs["human_oversight_residual_risk"]
+                + " | Contestability: "
+                + inputs["contestability_residual_risk"]
+            ),
+            "Assessment status": "Open"
+        })
+
+    return pd.DataFrame(rows)
+
+
+def build_summary_risk_register(risks, inputs, flags):
+    rows = []
+
+    for risk in risks:
+        risk_id = risk["ID"]
+        rows.append({
+            "Risk ID": risk_id,
+            "Priority": compute_risk_priority(risk, inputs, flags),
+            "Source": classify_risk_source(risk_id),
+            "Risk": risk["Fundamental rights risk"],
+            "Status": "Open"
+        })
+
+    return pd.DataFrame(rows)
+
+
+def build_mitigation_action_plan(risks, inputs, flags):
+    rows = []
+
+    for risk in risks:
+        risk_id = risk["ID"]
+        priority = compute_risk_priority(risk, inputs, flags)
+        actions = suggested_actions_for_risk(risk_id)
+
+        for action, evidence in actions:
+            rows.append({
+                "Risk ID": risk_id,
+                "Priority": priority,
+                "Action required": action,
+                "Evidence to collect": evidence,
+                "Suggested owner": suggest_owner_for_action(action),
+                "Status": "To be started",
+                "Deadline": "To be defined",
+                "Evidence collected": "",
+                "Residual risk after action": "To be verified"
+            })
+
+    return pd.DataFrame(rows)
+
+
+def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia_missing, coherence_warnings, final_decision_log):
     is_provider = is_provider_role(inputs)
     is_deployer = is_deployer_role(inputs)
 
@@ -1382,6 +1388,11 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
     report.append("")
 
     report.append("## 2. DPIA core analysis")
+    report.append(f"- DPIA completeness score: {dpia_score}%")
+    if dpia_missing:
+        report.append(f"- Missing or weak DPIA elements: {', '.join(dpia_missing)}")
+    else:
+        report.append("- Missing or weak DPIA elements: none")
     report.append("")
     report.append("### 2.1 Processing description")
     report.append(f"- Purpose: {inputs['purpose']}")
@@ -1435,7 +1446,6 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
     report.append("")
 
     report.append("## 4. Mitigation measures")
-    report.append("")
     report.append("### 4.1 Data quality and data governance")
     report.append(f"- Data quality assessed: {inputs['data_quality_assessed']}")
     report.append(f"- Data quality measures: {', '.join(inputs['data_quality_measures'])}")
@@ -1464,13 +1474,6 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
 
     if is_provider:
         report.append("## 5A. Provider-side AI Act Article 9 add-on")
-        report.append(
-            "This module is not a duplicate of the DPIA. It captures the provider-side "
-            "risk-management features specific to high-risk AI systems: lifecycle review, "
-            "health and safety risk, fundamental-rights risk, intended purpose, reasonably "
-            "foreseeable misuse, post-market monitoring feedback, and targeted risk-control measures."
-        )
-        report.append("")
         report.append(f"- Continuous lifecycle review and updating: {inputs['provider_lifecycle_review']}")
         report.append(f"- Known and foreseeable health/safety risk: {inputs['provider_health_safety_risk']}")
         report.append(f"- Known and foreseeable fundamental-rights risk: {inputs['provider_fr_risk']}")
@@ -1485,33 +1488,21 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
 
     if is_deployer:
         report.append("## 5B. Deployer-side AI Act Article 27 add-on")
-        report.append(
-            "This module is not a duplicate of the DPIA. It captures the deployment-specific "
-            "features of the FRIA: deployer process, period and frequency of use, affected "
-            "categories, specific risks of harm in context, provider information, human oversight "
-            "according to instructions, and measures in case risks materialise."
-        )
-        report.append("")
         report.append(f"- Deployer process description: {inputs['deployer_process_description']}")
         report.append(f"- Expected period of use: {inputs['deployment_period']}")
         report.append(f"- Expected frequency of use: {inputs['deployment_frequency']}")
         report.append(f"- Affected categories described: {inputs['affected_categories_described']}")
         report.append(f"- Provider Article 13 information used: {inputs['provider_article13_info_used']}")
         report.append(f"- Specific risks of harm in context: {inputs['deployer_specific_harms']}")
-        report.append(
-            "- Human oversight implemented according to instructions: "
-            f"{inputs['deployer_human_oversight_according_to_instructions']}"
-        )
+        report.append(f"- Human oversight implemented according to instructions: {inputs['deployer_human_oversight_according_to_instructions']}")
         report.append(f"- Measures if risks materialise: {inputs['risk_materialisation_measures']}")
         report.append(f"- Internal governance and complaint mechanisms: {inputs['deployer_governance_complaints']}")
         report.append(f"- Post-deployment monitoring: {inputs['monitoring']}")
         report.append("")
 
     report.append("## 6. Fundamental rights risks selected")
-
     if not risks:
         report.append("No risk automatically activated. Manual legal review is required.")
-        report.append("")
     else:
         for risk in risks:
             report.append(f"### {risk['ID']} - {risk['Fundamental rights risk']}")
@@ -1529,24 +1520,31 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome):
         "to its assessment source, priority, required safeguards, mitigation evidence, "
         "responsible owner and residual-risk decision."
     )
-    report.append(
-        "The mitigation action plan translates each selected risk into concrete actions, "
-        "evidence requirements and ownership assignments. This allows the sandbox to observe "
-        "how risks are selected, prioritised, mitigated and justified."
-    )
     report.append("")
 
-    report.append("## 7. Red flags")
+    report.append("## 7. Red flags and coherence warnings")
     if not flags:
         report.append("No red flags detected.")
     else:
         for level, message in flags:
             report.append(f"- [{level}] {message}")
+
+    if coherence_warnings:
+        for warning in coherence_warnings:
+            report.append(f"- [COHERENCE] {warning}")
     report.append("")
 
     report.append("## 8. Scrutiny and recommended outcome")
     report.append(f"- Scrutiny level: {scrutiny_level}")
     report.append(f"- Recommended outcome: {outcome}")
+    report.append("")
+
+    report.append("## 9. Final governance decision log")
+    report.append(f"- Final decision: {final_decision_log['Final decision']}")
+    report.append(f"- Decision-maker: {final_decision_log['Decision-maker']}")
+    report.append(f"- Conditions for deployment: {final_decision_log['Conditions for deployment']}")
+    report.append(f"- Decision reasoning: {final_decision_log['Decision reasoning']}")
+    report.append(f"- Review date: {final_decision_log['Review date']}")
     report.append("")
 
     report.append("## Methodological note")
@@ -1624,15 +1622,9 @@ with st.form("assessment_form"):
         )
 
     with col2:
-        accountability_owner = st.text_input(
-            "Accountability owner",
-            "DPO / AI Governance Officer"
-        )
+        accountability_owner = st.text_input("Accountability owner", "DPO / AI Governance Officer")
         legal_basis = st.selectbox("Legal basis", LEGAL_BASES)
-        data_necessary = st.selectbox(
-            "Are data strictly necessary for the stated purpose?",
-            YES_NO_OPTIONS
-        )
+        data_necessary = st.selectbox("Are data strictly necessary for the stated purpose?", YES_NO_OPTIONS)
 
     st.header("2. DPIA core analysis")
 
@@ -1723,11 +1715,7 @@ with st.form("assessment_form"):
     col5, col6 = st.columns(2)
 
     with col5:
-        data_sources = st.multiselect(
-            "Data sources",
-            DATA_SOURCES,
-            default=[]
-        )
+        data_sources = st.multiselect("Data sources", DATA_SOURCES, default=[])
 
         data_minimisation = st.selectbox(
             "Are the data limited to what is necessary for the purpose?",
@@ -2225,7 +2213,6 @@ if submitted:
         "legal_basis": legal_basis,
         "data_necessary": data_necessary,
 
-        # DPIA core analysis
         "purpose": purpose,
         "processing_description": processing_description,
         "processing_context": processing_context,
@@ -2254,13 +2241,11 @@ if submitted:
         "dpia_high_risk": dpia_high_risk,
         "dpia_risk_description": dpia_risk_description,
 
-        # Fundamental-rights context
         "contexts": contexts,
         "actions": actions,
         "decision_effect": decision_effect,
         "groups": groups,
 
-        # Mitigation measures
         "data_quality_assessed": data_quality_assessed,
         "data_quality_measures": data_quality_measures,
         "data_quality_residual_risk": data_quality_residual_risk,
@@ -2279,7 +2264,6 @@ if submitted:
         "affected_groups_consulted": affected_groups_consulted,
         "governance_notes": governance_notes,
 
-        # Provider-side Article 9 add-on
         "provider_lifecycle_review": provider_lifecycle_review,
         "provider_health_safety_risk": provider_health_safety_risk,
         "provider_fr_risk": provider_fr_risk,
@@ -2291,7 +2275,6 @@ if submitted:
         "residual_risk_defined": residual_risk_defined,
         "provider_article9_notes": provider_article9_notes,
 
-        # Deployer-side Article 27 add-on
         "deployer_process_description": deployer_process_description,
         "deployment_period": deployment_period,
         "deployment_frequency": deployment_frequency,
@@ -2308,7 +2291,28 @@ if submitted:
     flags = compute_red_flags(inputs, risks)
     scrutiny_level = compute_scrutiny_level(inputs, flags, risks)
     outcome = compute_outcome(flags, scrutiny_level)
-    report = build_report(inputs, risks, flags, scrutiny_level, outcome)
+    dpia_score, dpia_missing = compute_dpia_completeness(inputs)
+    coherence_warnings = compute_coherence_warnings(inputs)
+
+    final_decision_log = {
+        "Final decision": "To be decided",
+        "Decision-maker": "",
+        "Conditions for deployment": "",
+        "Decision reasoning": "",
+        "Review date": ""
+    }
+
+    report = build_report(
+        inputs,
+        risks,
+        flags,
+        scrutiny_level,
+        outcome,
+        dpia_score,
+        dpia_missing,
+        coherence_warnings,
+        final_decision_log
+    )
 
     st.session_state["last_assessment"] = {
         "inputs": inputs,
@@ -2316,13 +2320,13 @@ if submitted:
         "flags": flags,
         "scrutiny_level": scrutiny_level,
         "outcome": outcome,
+        "dpia_score": dpia_score,
+        "dpia_missing": dpia_missing,
+        "coherence_warnings": coherence_warnings,
+        "final_decision_log": final_decision_log,
         "report": report
     }
 
-
-# ---------------------------------------------------------------------
-# OUTPUT
-# ---------------------------------------------------------------------
 
 # ---------------------------------------------------------------------
 # OUTPUT
@@ -2334,19 +2338,35 @@ if "last_assessment" in st.session_state:
     st.divider()
     st.header("Assessment result")
 
-    col_a, col_b, col_c = st.columns(3)
+    col_a, col_b, col_c, col_d = st.columns(4)
 
     with col_a:
-        st.metric("Fundamental-rights risks selected", len(result["risks"]))
+        st.metric("DPIA completeness", f"{result['dpia_score']}%")
 
     with col_b:
-        st.metric("Red flags", len(result["flags"]))
+        st.metric("FR risks selected", len(result["risks"]))
 
     with col_c:
+        st.metric("Red flags", len(result["flags"]))
+
+    with col_d:
         st.metric("Scrutiny level", result["scrutiny_level"])
+
+    if result["dpia_missing"]:
+        with st.expander("Missing or weak DPIA elements", expanded=False):
+            for item in result["dpia_missing"]:
+                st.write("-", item)
 
     st.subheader("Recommended outcome")
     st.markdown(f"**{result['outcome']}**")
+
+    st.subheader("Coherence warnings")
+
+    if result["coherence_warnings"]:
+        for warning in result["coherence_warnings"]:
+            st.warning(warning)
+    else:
+        st.success("No coherence warnings detected.")
 
     st.subheader("Red flags")
 
@@ -2361,19 +2381,30 @@ if "last_assessment" in st.session_state:
             else:
                 st.info(f"{level}: {message}")
 
-    st.subheader("Operational Fundamental Rights Risk Register")
+    st.subheader("Summary Fundamental Rights Risk Register")
 
     if result["risks"]:
-        operational_register = build_operational_risk_register(
+        summary_register = build_summary_risk_register(
             result["risks"],
             result["inputs"],
             result["flags"]
         )
-        st.dataframe(operational_register, use_container_width=True)
+        st.dataframe(summary_register, use_container_width=True)
     else:
         st.info("No risk automatically activated. Manual legal review is required.")
 
-    st.subheader("Mitigation Action Plan")
+    with st.expander("Operational Fundamental Rights Risk Register", expanded=False):
+        if result["risks"]:
+            operational_register = build_operational_risk_register(
+                result["risks"],
+                result["inputs"],
+                result["flags"]
+            )
+            st.dataframe(operational_register, use_container_width=True)
+        else:
+            st.info("No operational risk register generated.")
+
+    st.subheader("Editable Mitigation Action Plan")
 
     if result["risks"]:
         mitigation_plan = build_mitigation_action_plan(
@@ -2381,9 +2412,71 @@ if "last_assessment" in st.session_state:
             result["inputs"],
             result["flags"]
         )
-        st.dataframe(mitigation_plan, use_container_width=True)
+
+        edited_mitigation_plan = st.data_editor(
+            mitigation_plan,
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status",
+                    options=ACTION_STATUSES,
+                    required=True
+                ),
+                "Residual risk after action": st.column_config.SelectboxColumn(
+                    "Residual risk after action",
+                    options=RISK_LEVELS,
+                    required=True
+                )
+            }
+        )
+        st.session_state["edited_mitigation_plan"] = edited_mitigation_plan
     else:
         st.info("No mitigation action plan generated.")
+
+    st.subheader("Final governance decision log")
+
+    col_decision_1, col_decision_2 = st.columns(2)
+
+    with col_decision_1:
+        final_decision = st.selectbox(
+            "Final governance decision",
+            GOVERNANCE_DECISIONS,
+            index=GOVERNANCE_DECISIONS.index("To be decided")
+        )
+
+        decision_maker = st.text_input(
+            "Decision-maker / governance body",
+            ""
+        )
+
+        review_date = st.text_input(
+            "Review date",
+            ""
+        )
+
+    with col_decision_2:
+        conditions_for_deployment = st.text_area(
+            "Conditions for deployment",
+            "",
+            placeholder="List mandatory safeguards, escalation duties, or deployment conditions."
+        )
+
+        decision_reasoning = st.text_area(
+            "Decision reasoning",
+            "",
+            placeholder="Explain why the residual risk is accepted, rejected or requires redesign."
+        )
+
+    final_decision_log = {
+        "Final decision": final_decision,
+        "Decision-maker": decision_maker,
+        "Conditions for deployment": conditions_for_deployment,
+        "Decision reasoning": decision_reasoning,
+        "Review date": review_date
+    }
+
+    st.session_state["last_assessment"]["final_decision_log"] = final_decision_log
 
     st.subheader("Download report")
 
@@ -2394,6 +2487,10 @@ if "last_assessment" in st.session_state:
         .replace("/", "_")
     )
 
+    operational_register = pd.DataFrame()
+    summary_register = pd.DataFrame()
+    mitigation_plan_download = pd.DataFrame()
+
     if result["risks"]:
         operational_register = build_operational_risk_register(
             result["risks"],
@@ -2401,10 +2498,26 @@ if "last_assessment" in st.session_state:
             result["flags"]
         )
 
-        mitigation_plan = build_mitigation_action_plan(
+        summary_register = build_summary_risk_register(
             result["risks"],
             result["inputs"],
             result["flags"]
+        )
+
+        mitigation_plan_download = st.session_state.get(
+            "edited_mitigation_plan",
+            build_mitigation_action_plan(
+                result["risks"],
+                result["inputs"],
+                result["flags"]
+            )
+        )
+
+        st.download_button(
+            "Download Summary Risk Register CSV",
+            summary_register.to_csv(index=False),
+            file_name=f"{safe_file_name}_summary_risk_register.csv",
+            mime="text/csv"
         )
 
         st.download_button(
@@ -2416,21 +2529,46 @@ if "last_assessment" in st.session_state:
 
         st.download_button(
             "Download Mitigation Action Plan CSV",
-            mitigation_plan.to_csv(index=False),
+            mitigation_plan_download.to_csv(index=False),
             file_name=f"{safe_file_name}_mitigation_action_plan.csv",
             mime="text/csv"
         )
 
+    updated_report = build_report(
+        result["inputs"],
+        result["risks"],
+        result["flags"],
+        result["scrutiny_level"],
+        result["outcome"],
+        result["dpia_score"],
+        result["dpia_missing"],
+        result["coherence_warnings"],
+        final_decision_log
+    )
+
     st.download_button(
         "Download Markdown report",
-        result["report"],
+        updated_report,
         file_name=f"{safe_file_name}_fundamental_rights_assessment.md",
         mime="text/markdown"
     )
 
+    json_payload = {
+        "inputs": result["inputs"],
+        "risks": result["risks"],
+        "flags": result["flags"],
+        "scrutiny_level": result["scrutiny_level"],
+        "outcome": result["outcome"],
+        "dpia_score": result["dpia_score"],
+        "dpia_missing": result["dpia_missing"],
+        "coherence_warnings": result["coherence_warnings"],
+        "final_decision_log": final_decision_log,
+        "generated_at": datetime.now().isoformat()
+    }
+
     st.download_button(
         "Download JSON assessment",
-        json.dumps(result, ensure_ascii=False, indent=2),
+        json.dumps(json_payload, ensure_ascii=False, indent=2),
         file_name=f"{safe_file_name}_assessment.json",
         mime="application/json"
     )
