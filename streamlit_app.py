@@ -22,8 +22,11 @@ st.caption(
 
 st.markdown(
     """
-    **Created by F. Paolucci for DIGCON — FIS-funded project, Baffi Centre, Bocconi University**  
-    **All rights reserved**
+    **Created by Federica Paolucci for DIGCON — FIS-funded project, Baffi Centre, Bocconi University.**  
+  
+    **Tested by Silvia Pellegrini and Eleonora Silva for DIGCON — FIS-funded project, Baffi Centre, Bocconi University.**  
+     
+     **All rights reserved**
     """
 )
 
