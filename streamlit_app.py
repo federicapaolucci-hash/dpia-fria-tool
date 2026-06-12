@@ -95,8 +95,8 @@ DATA_CATEGORIES = [
     "Behavioural data",
     "Data from multiple sources",
     "Proxy variables",
-    "Children's data",
-    "Synthetic data"
+    "Synthetic data",
+    "Children's data"
 ]
 
 DATA_SOURCES = [
@@ -584,7 +584,7 @@ def compute_proportionality_judgment(inputs, risks, scoping):
         {"Criterion": "Human oversight is effective where the decision may affect persons or opportunities", "Result": audit_result(oversight_ok, inputs["human_oversight"] == "To be verified"), "Evidence": inputs["human_oversight"]},
         {"Criterion": "Contestability and remedy are effective where the decision may affect persons or opportunities", "Result": audit_result(remedy_ok, inputs["contestability"] in ["Partly", "To be verified"] or inputs["remedy_effectiveness"] in ["Partly", "To be verified"]), "Evidence": f"Contestability: {inputs['contestability']}; remedy: {inputs['remedy_effectiveness']}"},
         {"Criterion": "Vulnerable groups or power asymmetries are addressed through enhanced safeguards", "Result": audit_result(enhanced_safeguards_ok, vulnerable_context and concrete_safeguards), "Evidence": "Vulnerable/power-asymmetry context" if vulnerable_context else "Not triggered"},
-        {"Criterion": "Stakeholder consultation includes a documented governance response", "Result": audit_result(stakeholder_response_complete(inputs), inputs["affected_groups_consulted"] in ["Partly", "To be verified"]), "Evidence": inputs["affected_groups_consulted"]},
+        {"Criterion": "Affected-group consultation is documented where consultation is declared or needed for fair balancing", "Result": audit_result(inputs["affected_groups_consulted"] != "Yes" or not is_missing_text(inputs.get("affected_groups_consultation_notes", "")), inputs["affected_groups_consulted"] in ["Partly", "To be verified"]), "Evidence": inputs["affected_groups_consulted"]},
         {"Criterion": "Provider-side Article 9 risks are addressed where the provider module is triggered", "Result": audit_result(provider_risk_ok, False, should_open_provider_module(inputs, scoping) and is_info_gap_value(inputs["provider_technical_evidence_available"])), "Evidence": inputs["provider_targeted_measures"] if should_open_provider_module(inputs, scoping) else "Not triggered"},
         {"Criterion": "Deployer-side Article 27 safeguards are addressed where the deployer module is triggered", "Result": audit_result(deployer_risk_ok, False, should_open_deployer_module(inputs, scoping) and is_info_gap_value(inputs["deployer_process_evidence_available"])), "Evidence": inputs["risk_materialisation_measures"] if should_open_deployer_module(inputs, scoping) else "Not triggered"}
     ]
@@ -732,7 +732,7 @@ def compute_information_gaps(inputs, risks, scoping):
         add_gap("Participation", "Consultation is declared but not documented", "Stakeholder engagement cannot be evaluated as meaningful or representative", "Document who was consulted, how, at which stage, what information was provided, what feedback was received, and how it changed the assessment", "DPO / legal team / business owner")
 
     if inputs["affected_groups_consulted"] == "Yes" and not stakeholder_response_complete(inputs):
-        add_gap("Stakeholder governance response", "Stakeholder engagement lacks a documented governance response", "Engagement cannot be considered complete and proportionality cannot fully rely on the consultation", "Document concerns raised, accepted/rejected recommendations, mitigation measures introduced, unresolved issues, and justification for non-integration of feedback", "DPO / AI governance officer / decision-making body")
+        add_gap("Participation", "Stakeholder engagement lacks a documented governance response", "Stakeholder engagement cannot be considered complete or auditably meaningful", "Document stakeholder concerns, accepted or rejected recommendations, mitigation measures introduced, unresolved issues, and justification for non-integration of feedback", "Governance body / DPO / assessment owner")
 
     return gaps
 
@@ -740,25 +740,25 @@ def compute_information_gaps(inputs, risks, scoping):
 def stakeholder_response_complete(inputs):
     if inputs.get("affected_groups_consulted") != "Yes":
         return True
+
     required_fields = [
-        "affected_groups_consultation_notes",
         "stakeholder_concerns_raised",
         "stakeholder_recommendations_response",
         "stakeholder_mitigation_measures",
         "stakeholder_unresolved_issues",
         "stakeholder_non_integration_justification"
     ]
+
     return all(not is_missing_text(inputs.get(field, "")) for field in required_fields)
 
 
 def compute_stakeholder_escalations(inputs):
     rows = []
     for condition in inputs.get("stakeholder_escalation_conditions", []):
-        rule = STAKEHOLDER_ESCALATION_RULES.get(condition, {})
         rows.append({
             "Condition": condition,
-            "Escalation consequence": rule.get("consequence", "Governance review"),
-            "Severity": rule.get("severity", "HIGH")
+            "Escalation consequence": STAKEHOLDER_ESCALATION_TRIGGERS.get(condition, "Governance review"),
+            "Governance response required": "Yes"
         })
     return rows
 
@@ -1079,19 +1079,18 @@ def build_report(result, final_decision_log):
     else:
         lines.append("No information gaps detected.")
     lines.append("")
-    lines.append("## 6B. Stakeholder engagement and escalation")
+    lines.append("## 6B. Stakeholder engagement and governance response")
     lines.append(f"- Affected groups or representatives consulted: {inputs['affected_groups_consulted']}")
-    lines.append(f"- Consultation documentation: {inputs.get('affected_groups_consultation_notes', 'Not applicable')}")
-    lines.append(f"- Stakeholder concerns raised: {inputs.get('stakeholder_concerns_raised', 'Not applicable')}")
-    lines.append(f"- Accepted or rejected recommendations: {inputs.get('stakeholder_recommendations_response', 'Not applicable')}")
-    lines.append(f"- Mitigation measures introduced: {inputs.get('stakeholder_mitigation_measures', 'Not applicable')}")
-    lines.append(f"- Unresolved issues: {inputs.get('stakeholder_unresolved_issues', 'Not applicable')}")
-    lines.append(f"- Justification for non-integration of feedback: {inputs.get('stakeholder_non_integration_justification', 'Not applicable')}")
-    if result.get("stakeholder_escalations"):
-        for escalation in result["stakeholder_escalations"]:
-            lines.append(f"- Escalation: {escalation['Condition']} -> {escalation['Escalation consequence']}")
-    else:
-        lines.append("- Stakeholder escalation triggers: none selected")
+    if inputs["affected_groups_consulted"] == "Yes":
+        lines.append(f"- Consultation documentation: {inputs.get('affected_groups_consultation_notes', '')}")
+        lines.append(f"- Stakeholder concerns raised: {inputs.get('stakeholder_concerns_raised', '')}")
+        lines.append(f"- Accepted or rejected recommendations: {inputs.get('stakeholder_recommendations_response', '')}")
+        lines.append(f"- Mitigation measures introduced: {inputs.get('stakeholder_mitigation_measures', '')}")
+        lines.append(f"- Unresolved issues: {inputs.get('stakeholder_unresolved_issues', '')}")
+        lines.append(f"- Justification for non-integration of feedback: {inputs.get('stakeholder_non_integration_justification', '')}")
+        if result.get("stakeholder_escalations"):
+            for escalation in result["stakeholder_escalations"]:
+                lines.append(f"- Escalation: {escalation['Condition']} → {escalation['Escalation consequence']}")
     lines.append("")
     lines.append("## 7. Risks and red flags")
     lines.append(f"- Fundamental-rights risks selected: {len(risks)}")
@@ -1315,40 +1314,38 @@ with st.form("assessment_form"):
         with st.expander("Stakeholder consultation documentation and governance response", expanded=True):
             st.markdown(
                 """
-                Stakeholder engagement is not complete merely because consultation took place.
-                It must be possible to audit what concerns were raised, which recommendations were accepted or rejected,
-                which safeguards were changed, what remains unresolved, and why feedback was not integrated.
+                Stakeholder engagement is not complete merely because consultation occurred. It must be possible to audit how the organisation responded to stakeholder concerns and whether feedback affected safeguards, proportionality or the final decision.
                 """
             )
             affected_groups_consultation_notes = st.text_area(
-                "How was the consultation conducted?",
+                "How was the consultation conducted and used in the assessment?",
                 "",
-                placeholder="Explain who was consulted, why they were selected, at which DPIA stage, what information they received, how feedback was collected, and whether the process was accessible and representative."
+                placeholder="Explain who was consulted, why they were selected, at which DPIA stage, what information they received, what feedback they provided, and how that feedback changed the assessment, safeguards or final decision."
             )
             stakeholder_concerns_raised = st.text_area(
                 "Stakeholder concerns raised",
                 "",
-                placeholder="List the main concerns raised, including concerns about discrimination, opacity, lack of remedy, power asymmetry, exclusion, or disproportionate monitoring."
+                placeholder="Describe the concerns raised by affected groups, representatives, unions, civil society, trusted flaggers, DPO or other consulted actors."
             )
             stakeholder_recommendations_response = st.text_area(
                 "Accepted or rejected recommendations",
                 "",
-                placeholder="Explain which recommendations were accepted, which were rejected, and who made that decision."
+                placeholder="List stakeholder recommendations and indicate which were accepted, rejected or deferred."
             )
             stakeholder_mitigation_measures = st.text_area(
                 "Mitigation measures introduced because of stakeholder feedback",
                 "",
-                placeholder="Describe any changes to safeguards, notices, complaint mechanisms, oversight, fallback channels, data quality checks, or deployment conditions."
+                placeholder="Explain which safeguards, oversight measures, contestability channels or redesign measures were introduced after consultation."
             )
             stakeholder_unresolved_issues = st.text_area(
                 "Unresolved stakeholder issues",
                 "",
-                placeholder="List concerns that remain unresolved and explain how they affect residual risk, proportionality, or the final governance decision."
+                placeholder="List concerns that remain unresolved and explain their effect on residual risk and proportionality."
             )
             stakeholder_non_integration_justification = st.text_area(
                 "Justification for non-integration of feedback",
                 "",
-                placeholder="Where feedback was not integrated, explain the legal, organisational or technical justification and who accepted the residual concern."
+                placeholder="Explain why any stakeholder recommendation was not integrated and who accepted that residual risk."
             )
             stakeholder_escalation_conditions = st.multiselect(
                 "Stakeholder-based escalation triggers",
@@ -1356,12 +1353,12 @@ with st.form("assessment_form"):
                 default=[]
             )
             if stakeholder_escalation_conditions:
-                st.caption("Selected triggers will be reflected in red flags, escalation consequences and the final report.")
+                st.markdown("**Escalation consequences**")
                 st.dataframe(
                     pd.DataFrame([
                         {
                             "Condition": condition,
-                            "Escalation consequence": STAKEHOLDER_ESCALATION_RULES[condition]["consequence"]
+                            "Escalation consequence": STAKEHOLDER_ESCALATION_TRIGGERS[condition]
                         }
                         for condition in stakeholder_escalation_conditions
                     ]),
@@ -1651,13 +1648,9 @@ if "last_assessment" in st.session_state:
     else:
         st.success("No information gaps detected.")
 
-    st.subheader("Stakeholder engagement escalation")
     if result.get("stakeholder_escalations"):
+        st.subheader("Stakeholder-based escalation triggers")
         st.dataframe(pd.DataFrame(result["stakeholder_escalations"]), use_container_width=True)
-    elif inputs.get("affected_groups_consulted") == "Yes":
-        st.success("No stakeholder-based escalation trigger selected.")
-    else:
-        st.info("Stakeholder engagement was not declared as completed.")
 
     st.subheader("Red flags")
     if result["flags"]:
