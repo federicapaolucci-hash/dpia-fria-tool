@@ -244,6 +244,7 @@ GPAI_MODEL_STATUS = [
 ]
 
 HIGH_RISK_CLASSIFICATION = [
+    "Not yet assessed",
     "High-risk under Article 6(1) AI Act — AI embedded in regulated product",
     "High-risk under Article 6(2) AI Act — standalone Annex III AI system",
     "Not high-risk under Article 6 AI Act",
@@ -1202,7 +1203,7 @@ def compute_scrutiny_level(inputs, flags, risks):
 
 def compute_ai_scoping(inputs):
     ai_object_type = inputs.get("ai_object_type", "Unclear / requires legal-technical review")
-    high_risk_classification = inputs.get("high_risk_classification", "Classification unclear — legal/technical review required")
+    high_risk_classification = inputs.get("high_risk_classification", "Not yet assessed")
     gpai_status = inputs.get("gpai_model_status", "Not applicable")
 
     is_ai_relevant = ai_object_type not in ["Not an AI system"]
@@ -1931,92 +1932,99 @@ with st.expander("Methodological logic", expanded=True):
         """
     )
 
-with st.form("assessment_form"):
-    st.header("0. AI Act scoping checklist")
+st.header("0. AI Act scoping checklist")
 
+st.markdown(
+    """
+    This preliminary scoping step clarifies what is being assessed. It does not replace the DPIA.
+    It determines whether the object is an AI system, a GPAI model, an AI system based on a GPAI model,
+    and whether high-risk AI Act modules should open.
+    """
+)
+
+with st.expander("Info: AI system, GPAI model and GPAI-based system", expanded=False):
     st.markdown(
         """
-        This preliminary scoping step clarifies what is being assessed. It does not replace the DPIA.
-        It determines whether the object is an AI system, a GPAI model, an AI system based on a GPAI model,
-        and whether high-risk AI Act modules should open.
+        **Not an AI system**: static spreadsheet, ordinary database query, simple dashboard, or predefined rule execution without inference.
+
+        **AI system**: a machine-based system that infers outputs such as predictions, scores, recommendations, classifications, content or decisions that can influence a physical or virtual environment.
+
+        **GPAI model**: the underlying general-purpose model itself, capable of performing a wide range of tasks and being integrated into many downstream systems.
+
+        **AI system based on a GPAI model**: a deployable application or service built on top of a GPAI model, for example a recruitment chatbot or decision-support tool based on a large language model.
         """
     )
 
-    with st.expander("Info: AI system, GPAI model and GPAI-based system", expanded=False):
-        st.markdown(
-            """
-            **Not an AI system**: static spreadsheet, ordinary database query, simple dashboard, or predefined rule execution without inference.
+with st.expander("Info: high-risk classification under Article 6 AI Act", expanded=False):
+    st.markdown(
+        """
+        Article 6 AI Act creates two distinct pathways to high-risk classification.
 
-            **AI system**: a machine-based system that infers outputs such as predictions, scores, recommendations, classifications, content or decisions that can influence a physical or virtual environment.
+        **1. AI embedded in regulated products — Article 6(1)**  
+        The AI system is a safety component of a product already regulated by sectoral product-safety legislation.
 
-            **GPAI model**: the underlying general-purpose model itself, capable of performing a wide range of tasks and being integrated into many downstream systems.
+        Examples: medical devices, machinery, automotive, aviation, rail.
 
-            **AI system based on a GPAI model**: a deployable application or service built on top of a GPAI model, for example a recruitment chatbot or decision-support tool based on a large language model.
-            """
-        )
+        **Logic:** product safety.
 
-    with st.expander("Info: high-risk classification under Article 6 AI Act", expanded=False):
-        st.markdown(
-            """
-            Article 6 AI Act creates two distinct pathways to high-risk classification.
+        **2. Standalone AI systems — Article 6(2) + Annex III**  
+        The AI system is listed in Annex III, based on its intended purpose and potential impact on persons and fundamental rights.
 
-            **1. AI embedded in regulated products — Article 6(1)**  
-            The AI system is a safety component of a product already regulated by sectoral product-safety legislation.
+        Examples: recruitment, education, law enforcement, migration, access to essential services.
 
-            Examples: medical devices, machinery, automotive, aviation, rail.
+        **Logic:** fundamental rights and societal impact.
 
-            **Logic:** product safety.
+        If classification is uncertain, the assessment should record a classification gap and require legal/technical review.
+        """
+    )
 
-            **2. Standalone AI systems — Article 6(2) + Annex III**  
-            The AI system is listed in Annex III, based on its intended purpose and potential impact on persons and fundamental rights.
+col0a, col0b = st.columns(2)
 
-            Examples: recruitment, education, law enforcement, migration, access to essential services.
+with col0a:
+    ai_object_type = st.selectbox(
+        "What is the object of the assessment?",
+        AI_OBJECT_TYPES,
+        index=AI_OBJECT_TYPES.index("AI system")
+    )
 
-            **Logic:** fundamental rights and societal impact.
+    gpai_model_status = st.selectbox(
+        "If a GPAI model is involved, what is its status?",
+        GPAI_MODEL_STATUS,
+        index=GPAI_MODEL_STATUS.index("Not applicable")
+    )
 
-            If classification is uncertain, the assessment should record a classification gap and require legal/technical review.
-            """
-        )
+with col0b:
+    high_risk_classification = st.selectbox(
+        "High-risk classification under Article 6 AI Act",
+        HIGH_RISK_CLASSIFICATION,
+        index=HIGH_RISK_CLASSIFICATION.index("Not yet assessed")
+    )
 
-    col0a, col0b = st.columns(2)
+if ai_object_type == "Not an AI system":
+    st.info(
+        "The AI Act high-risk modules will not open. The DPIA continues where personal data processing exists."
+    )
+elif high_risk_classification == "Not yet assessed":
+    st.info(
+        "Select the Article 6 classification to determine whether role-triggered Article 9 and/or Article 27 modules should open."
+    )
+elif high_risk_classification == "Not high-risk under Article 6 AI Act":
+    st.info(
+        "The DPIA continues. Article 9 and Article 27 high-risk AI modules will not open, but other AI Act obligations may still require separate assessment."
+    )
+elif high_risk_classification.startswith("High-risk"):
+    st.success(
+        "High-risk AI Act classification selected. Role-triggered Article 9 and/or Article 27 modules will open according to the filer role."
+    )
+elif high_risk_classification == "Classification unclear — legal/technical review required":
+    st.warning(
+        "AI Act classification is unclear. The tool records an information gap and requires legal/technical review before final closure."
+    )
+else:
+    st.info("Complete the AI Act scoping fields before finalising the assessment.")
 
-    with col0a:
-        ai_object_type = st.selectbox(
-            "What is the object of the assessment?",
-            AI_OBJECT_TYPES,
-            index=AI_OBJECT_TYPES.index("AI system")
-        )
 
-        gpai_model_status = st.selectbox(
-            "If a GPAI model is involved, what is its status?",
-            GPAI_MODEL_STATUS,
-            index=GPAI_MODEL_STATUS.index("Not applicable")
-        )
-
-    with col0b:
-        high_risk_classification = st.selectbox(
-            "High-risk classification under Article 6 AI Act",
-            HIGH_RISK_CLASSIFICATION,
-            index=HIGH_RISK_CLASSIFICATION.index("Classification unclear — legal/technical review required")
-        )
-
-    if ai_object_type == "Not an AI system":
-        st.info(
-            "The AI Act high-risk modules will not open. The DPIA continues where personal data processing exists."
-        )
-    elif high_risk_classification == "Not high-risk under Article 6 AI Act":
-        st.info(
-            "The DPIA continues. Article 9 and Article 27 high-risk AI modules will not open, but other AI Act obligations may still require separate assessment."
-        )
-    elif high_risk_classification.startswith("High-risk"):
-        st.success(
-            "High-risk AI Act classification selected. Role-triggered Article 9 and/or Article 27 modules will open according to the filer role."
-        )
-    else:
-        st.warning(
-            "AI Act classification is unclear. The tool records an information gap and requires legal/technical review before final closure."
-        )
-
+with st.form("assessment_form"):
     st.header("1. Assessment scope")
 
     col1, col2 = st.columns(2)
