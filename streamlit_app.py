@@ -27,6 +27,11 @@ st.markdown(
     """
 )
 
+st.info(
+    "Research prototype — for academic and sandbox testing purposes only. "
+    "Do not enter personal data, confidential DPIAs, trade secrets or sensitive organisational information."
+)
+
 
 # ---------------------------------------------------------------------
 # OPTIONS
@@ -75,8 +80,8 @@ DATA_CATEGORIES = [
     "Behavioural data",
     "Data from multiple sources",
     "Proxy variables",
-    "Synthetic data",
-    "Children's data"
+    "Children's data",
+    "Synthetic data"
 ]
 
 DATA_SOURCES = [
@@ -223,32 +228,27 @@ ACTION_STATUSES = [
     "Blocked"
 ]
 
-AI_SCOPING_STATUS_OPTIONS = [
-    "Likely AI system",
-    "Borderline / requires legal-technical review",
-    "Likely not an AI system"
-]
-
 AI_OBJECT_TYPES = [
+    "Not an AI system",
     "AI system",
     "AI system based on a GPAI model",
     "GPAI model",
-    "Non-AI software / ordinary digital tool",
     "Unclear / requires legal-technical review"
 ]
 
-GPAI_SYSTEMIC_RISK_OPTIONS = [
+GPAI_MODEL_STATUS = [
     "Not applicable",
-    "No systemic-risk relevance identified",
-    "Systemic-risk relevance to be verified",
-    "Systemic-risk GPAI model"
+    "GPAI model without systemic-risk indication",
+    "GPAI model with systemic-risk indication",
+    "Systemic-risk status unclear / to be verified"
 ]
 
-HIGH_RISK_RELEVANCE_OPTIONS = [
-    "Potentially high-risk AI system",
-    "Not evidently high-risk",
-    "Requires classification review",
-    "Not applicable because likely not AI"
+HIGH_RISK_CLASSIFICATION = [
+    "High-risk under Article 6(1) AI Act — AI embedded in regulated product",
+    "High-risk under Article 6(2) AI Act — standalone Annex III AI system",
+    "Not high-risk under Article 6 AI Act",
+    "Classification unclear — legal/technical review required",
+    "Not applicable — not an AI system"
 ]
 
 STAKEHOLDER_ESCALATION_TRIGGERS = [
@@ -287,7 +287,6 @@ RISK_CATALOG = [
                 "Inferred/profiling data",
                 "Behavioural data",
                 "Data from multiple sources",
-                "Synthetic data",
                 "Children's data"
             ]
         },
@@ -745,224 +744,6 @@ def is_missing_text(value):
     return value is None or str(value).strip() == ""
 
 
-def pass_fail_rows(checks):
-    rows = []
-    for criterion, passed, evidence in checks:
-        rows.append({
-            "Criterion": criterion,
-            "Result": "Passed" if passed else "Failed",
-            "Evidence / reason": evidence
-        })
-    return rows
-
-
-def compute_ai_scoping(inputs):
-    if inputs["ai_system_status"] == "Likely not an AI system":
-        return {
-            "AI Act scoping result": "Likely not an AI system",
-            "AI Act module consequence": "AI Act Article 9 and Article 27 modules are not opened. Continue with the DPIA where personal data are processed."
-        }
-
-    if inputs["ai_object_type"] == "GPAI model":
-        return {
-            "AI Act scoping result": "GPAI model",
-            "AI Act module consequence": "The object appears to be a GPAI model. The ordinary DPIA remains relevant where personal data are processed, but provider/deployer system modules may not capture the full GPAI model regime."
-        }
-
-    if inputs["ai_object_type"] == "AI system based on a GPAI model":
-        return {
-            "AI Act scoping result": "AI system based on a GPAI model",
-            "AI Act module consequence": "Continue with the DPIA. Role-triggered provider/deployer modules open where the filer has the relevant role and high-risk relevance is present or requires review."
-        }
-
-    if inputs["ai_object_type"] == "AI system":
-        return {
-            "AI Act scoping result": "AI system",
-            "AI Act module consequence": "Continue with the DPIA. Role-triggered provider/deployer modules open where the filer has the relevant role and high-risk relevance is present or requires review."
-        }
-
-    return {
-        "AI Act scoping result": "Unclear / requires legal-technical review",
-        "AI Act module consequence": "Continue with the DPIA. Record an information gap and request legal-technical classification before closing the assessment."
-    }
-
-
-def ai_act_modules_relevant(inputs):
-    if inputs["ai_system_status"] == "Likely not an AI system":
-        return False
-    if inputs["ai_object_type"] in ["Non-AI software / ordinary digital tool", "GPAI model"]:
-        return False
-    return inputs["high_risk_relevance"] in [
-        "Potentially high-risk AI system",
-        "Requires classification review"
-    ]
-
-
-def compute_necessity_judgment(inputs):
-    checks = [
-        ("Purpose is specific, explicit and sufficiently determined", inputs["purpose_specificity"] == "Yes" and not is_missing_text(inputs["purpose"]), "Purpose field and purpose-specificity answer"),
-        ("Legal basis is identified and adequate", inputs["legal_basis"] not in ["To be determined", "Not applicable / to be verified"] and inputs["legal_basis_adequacy"] == "Yes", "Legal basis and legal-basis adequacy"),
-        ("Processing operation is sufficiently described", not is_missing_text(inputs["processing_description"]), "Systematic description of the processing operation"),
-        ("Data are strictly necessary for the stated purpose", inputs["data_necessary"] == "Yes", "Strict necessity of data"),
-        ("Data minimisation is demonstrated", inputs["data_minimisation"] == "Yes" and not no_measure_selected(inputs["data_categories"]), "Data categories and minimisation answer"),
-        ("Less intrusive alternatives have been assessed", inputs["alternatives_assessed"] == "Yes", "Alternatives assessment"),
-        ("Necessity reasoning is documented", not is_missing_text(inputs["necessity_reasoning"]), "Necessity reasoning text")
-    ]
-    passed = sum(1 for _, ok, _ in checks if ok)
-    failed = len(checks) - passed
-    if failed == 0:
-        judgment = "Demonstrated"
-    elif failed <= 2:
-        judgment = "Partially demonstrated"
-    else:
-        judgment = "Not demonstrated"
-    return {
-        "judgment": judgment,
-        "passed": passed,
-        "failed": failed,
-        "audit_trail": pass_fail_rows(checks)
-    }
-
-
-def compute_proportionality_judgment(inputs, risks, information_gaps):
-    significant_decision = inputs["decision_effect"] in [
-        "Legal or similarly significant effect",
-        "Access/exclusion/priority in services or opportunities"
-    ]
-    vulnerable_context = (
-        inputs["vulnerable_subjects"] == "Yes"
-        or inputs["power_asymmetry"] == "Yes"
-        or any(group in inputs["groups"] for group in [
-            "Children",
-            "Migrants/asylum seekers",
-            "Persons with disabilities",
-            "Protected or vulnerable groups",
-            "Welfare beneficiaries",
-            "Patients"
-        ])
-    )
-    high_residual_risk = any(inputs[key] in ["High", "Very high"] for key in [
-        "data_quality_residual_risk",
-        "human_oversight_residual_risk",
-        "contestability_residual_risk"
-    ])
-    checks = [
-        ("Proportionality reasoning is documented", not is_missing_text(inputs["proportionality_reasoning"]), "Proportionality reasoning text"),
-        ("Risks to rights and freedoms are identified", len(risks) > 0 or not is_missing_text(inputs["dpia_risk_description"]), "Risk register or DPIA risk description"),
-        ("Data quality safeguards are concrete", not no_measure_selected(inputs["data_quality_measures"]) and inputs["data_quality_assessed"] == "Yes", "Data-quality measures"),
-        ("Human oversight is effective where the decision is significant", (not significant_decision) or (inputs["human_oversight"] == "Effective" and not no_measure_selected(inputs["human_oversight_measures"])), "Human-oversight answer and measures"),
-        ("Contestability and remedy are effective where the decision is significant", (not significant_decision) or (inputs["contestability"] == "Yes" and inputs["remedy_effectiveness"] == "Yes" and not no_measure_selected(inputs["contestability_measures"])), "Contestability, remedy and measures"),
-        ("Residual risk is not high after safeguards", not high_residual_risk, "Residual risk after data quality, oversight and contestability"),
-        ("Vulnerable groups or power asymmetries are addressed with enhanced reasoning", (not vulnerable_context) or not is_missing_text(inputs["vulnerability_reasoning"]), "Vulnerability and power-asymmetry reasoning"),
-        ("No unresolved information gaps prevent verification", len(information_gaps) == 0, "Information gaps affecting auditability")
-    ]
-    passed = sum(1 for _, ok, _ in checks if ok)
-    failed = len(checks) - passed
-    if failed == 0:
-        judgment = "Demonstrated"
-    elif failed <= 3:
-        judgment = "Partially demonstrated"
-    else:
-        judgment = "Not demonstrated"
-    return {
-        "judgment": judgment,
-        "passed": passed,
-        "failed": failed,
-        "audit_trail": pass_fail_rows(checks)
-    }
-
-
-def compute_information_gaps(inputs, risks):
-    gaps = []
-    if inputs["ai_system_status"] == "Borderline / requires legal-technical review" or inputs["ai_object_type"] == "Unclear / requires legal-technical review":
-        gaps.append({
-            "Information gap": "AI Act classification is unclear",
-            "Why it matters": "Role-triggered AI Act modules and high-risk relevance cannot be verified.",
-            "Required action": "Request legal-technical classification of the tool.",
-            "Information owner": "Legal / AI governance / technical team"
-        })
-    if inputs["ai_object_type"] == "AI system based on a GPAI model":
-        gaps.append({
-            "Information gap": "Information on the underlying GPAI model may be needed",
-            "Why it matters": "Limitations, capabilities and provider documentation may affect data quality, safeguards and proportionality.",
-            "Required action": "Request model documentation, instructions for use, limitations and relevant risk information.",
-            "Information owner": "Provider / technical team"
-        })
-    if inputs["gpai_systemic_risk"] == "Systemic-risk relevance to be verified":
-        gaps.append({
-            "Information gap": "GPAI systemic-risk relevance is not verified",
-            "Why it matters": "The applicable GPAI governance obligations cannot be classified with confidence.",
-            "Required action": "Request provider documentation concerning GPAI model classification and systemic-risk status.",
-            "Information owner": "GPAI model provider"
-        })
-    if inputs["high_risk_relevance"] == "Requires classification review":
-        gaps.append({
-            "Information gap": "High-risk AI classification requires review",
-            "Why it matters": "Article 9 and Article 27 relevance may depend on the high-risk classification.",
-            "Required action": "Review intended purpose, deployment context and Annex III relevance.",
-            "Information owner": "Legal / AI governance"
-        })
-    if "FR2" in {risk["ID"] for risk in risks} and inputs["bias_control"] == "To be verified":
-        gaps.append({
-            "Information gap": "Bias/proxy-discrimination evidence is missing",
-            "Why it matters": "Discrimination risk cannot be verified or mitigated without evidence.",
-            "Required action": "Request bias testing, proxy-variable analysis or model validation evidence.",
-            "Information owner": "Technical/model validation team or provider"
-        })
-    if inputs["data_quality_assessed"] == "To be verified":
-        gaps.append({
-            "Information gap": "Data quality evidence is missing",
-            "Why it matters": "Necessity and proportionality cannot be fully verified without reliable data-quality evidence.",
-            "Required action": "Request data documentation, representativeness analysis and error-correction procedure.",
-            "Information owner": "Data governance / provider / technical team"
-        })
-    if inputs["affected_groups_consulted"] == "Yes" and is_missing_text(inputs.get("stakeholder_governance_response", "")):
-        gaps.append({
-            "Information gap": "Stakeholder engagement lacks documented governance response",
-            "Why it matters": "Consultation cannot be considered complete if concerns, accepted/rejected recommendations and reasons are not documented.",
-            "Required action": "Document concerns raised, accepted/rejected recommendations, mitigation measures, unresolved issues and reasons for non-integration.",
-            "Information owner": "Assessment owner / governance body"
-        })
-    return gaps
-
-
-def compute_stakeholder_escalations(inputs):
-    rows = []
-    for trigger in inputs.get("stakeholder_escalation_triggers", []):
-        rows.append({
-            "Condition": trigger,
-            "Escalation consequence": STAKEHOLDER_ESCALATION_MAP.get(trigger, "Governance review")
-        })
-    return rows
-
-
-def judgment_flags(necessity_judgment, proportionality_judgment, information_gaps, stakeholder_escalations):
-    flags = []
-    if necessity_judgment["judgment"] == "Not demonstrated":
-        flags.append(("BLOCKING", "Necessity is not demonstrated. The processing cannot proceed unless purpose, legal basis, data necessity, minimisation and alternatives are adequately justified."))
-    elif necessity_judgment["judgment"] == "Partially demonstrated":
-        flags.append(("HIGH", "Necessity is only partially demonstrated. Additional justification or redesign is required before the DPIA can be closed."))
-
-    if proportionality_judgment["judgment"] == "Not demonstrated":
-        flags.append(("BLOCKING", "Proportionality is not demonstrated. Identified risks, residual risks, safeguards, oversight, contestability or information gaps prevent a fair balance from being verified."))
-    elif proportionality_judgment["judgment"] == "Partially demonstrated":
-        flags.append(("HIGH", "Proportionality is only partially demonstrated. Additional safeguards, evidence or governance escalation are required."))
-
-    if information_gaps:
-        flags.append(("MEDIUM", "Information gaps affect auditability. The assessment records missing information without treating it as automatic non-compliance by the filer."))
-
-    for row in stakeholder_escalations:
-        condition = row["Condition"]
-        consequence = row["Escalation consequence"]
-        if condition == "Absence of contestability mechanisms":
-            flags.append(("BLOCKING", f"Stakeholder escalation trigger: {condition} → {consequence}."))
-        elif condition in ["Unresolved discrimination concerns", "Systemic concerns raised by trusted actors", "High-impact risks involving vulnerable groups"]:
-            flags.append(("HIGH", f"Stakeholder escalation trigger: {condition} → {consequence}."))
-        else:
-            flags.append(("MEDIUM", f"Stakeholder escalation trigger: {condition} → {consequence}."))
-    return flags
-
-
 def compute_dpia_completeness(inputs):
     checks = [
         ("Purpose described", not is_missing_text(inputs["purpose"])),
@@ -1099,7 +880,7 @@ def activate_fundamental_rights_risks(inputs):
                 "Safeguards to test": " | ".join(item["safeguards"])
             })
 
-    if is_provider_role(inputs):
+    if inputs.get("show_provider_module", is_provider_role(inputs)):
         if inputs["provider_health_safety_risk"] in ["High", "Very high"]:
             activated.append({
                 "ID": "FR-A9-HS",
@@ -1142,7 +923,7 @@ def activate_fundamental_rights_risks(inputs):
                 )
             })
 
-    if is_deployer_role(inputs):
+    if inputs.get("show_deployer_module", is_deployer_role(inputs)):
         if inputs["deployment_frequency"] in ["Regular", "Continuous"]:
             activated.append({
                 "ID": "FR-A27-SCALE",
@@ -1297,7 +1078,7 @@ def compute_red_flags(inputs, risks):
     if not inputs["accountability_owner"].strip():
         flags.append(("HIGH", "Accountability: internal accountability owner is missing."))
 
-    if is_provider_role(inputs):
+    if inputs.get("show_provider_module", is_provider_role(inputs)):
         if inputs["provider_lifecycle_review"] in ["No", "To be verified"]:
             flags.append(("MEDIUM", "Article 9 provider add-on: lifecycle review and updating are not clearly established."))
 
@@ -1313,7 +1094,7 @@ def compute_red_flags(inputs, risks):
         if inputs["provider_post_market_link"] in ["No", "To be verified"]:
             flags.append(("MEDIUM", "Article 9 provider add-on: post-market monitoring feedback is not linked to risk review."))
 
-    if is_deployer_role(inputs):
+    if inputs.get("show_deployer_module", is_deployer_role(inputs)):
         if inputs["deployer_process_description"].strip() == "":
             flags.append(("HIGH", "Article 27 deployer add-on: the deployer's process in which the AI system will be used is not described."))
 
@@ -1386,7 +1167,7 @@ def compute_scrutiny_level(inputs, flags, risks):
     if inputs["contestability_residual_risk"] in ["High", "Very high"]:
         score += 2
 
-    if is_provider_role(inputs):
+    if inputs.get("show_provider_module", is_provider_role(inputs)):
         if inputs["provider_health_safety_risk"] in ["High", "Very high"]:
             score += 2
         if inputs["provider_fr_risk"] in ["High", "Very high"]:
@@ -1394,7 +1175,7 @@ def compute_scrutiny_level(inputs, flags, risks):
         if inputs["provider_misuse_risk"] in ["High", "Very high"]:
             score += 2
 
-    if is_deployer_role(inputs):
+    if inputs.get("show_deployer_module", is_deployer_role(inputs)):
         if inputs["deployment_frequency"] in ["Regular", "Continuous"]:
             score += 2
         if inputs["affected_categories_described"] != "Yes":
@@ -1418,26 +1199,249 @@ def compute_scrutiny_level(inputs, flags, risks):
     return "Low"
 
 
+
+def compute_ai_scoping(inputs):
+    ai_object_type = inputs.get("ai_object_type", "Unclear / requires legal-technical review")
+    high_risk_classification = inputs.get("high_risk_classification", "Classification unclear — legal/technical review required")
+    gpai_status = inputs.get("gpai_model_status", "Not applicable")
+
+    is_ai_relevant = ai_object_type not in ["Not an AI system"]
+    is_high_risk_ai = high_risk_classification in [
+        "High-risk under Article 6(1) AI Act — AI embedded in regulated product",
+        "High-risk under Article 6(2) AI Act — standalone Annex III AI system"
+    ]
+    classification_gap = ai_object_type == "Unclear / requires legal-technical review" or high_risk_classification == "Classification unclear — legal/technical review required"
+
+    return {
+        "is_ai_relevant": is_ai_relevant,
+        "is_high_risk_ai": is_high_risk_ai,
+        "classification_gap": classification_gap,
+        "ai_object_type": ai_object_type,
+        "high_risk_classification": high_risk_classification,
+        "gpai_model_status": gpai_status
+    }
+
+
+def compute_necessity_judgment(inputs):
+    checks = [
+        ("Purpose specific and explicit", inputs["purpose_specificity"] == "Yes" and not is_missing_text(inputs["purpose"])),
+        ("Legal basis identified and adequate", inputs["legal_basis"] not in ["To be determined", "Not applicable / to be verified"] and inputs["legal_basis_adequacy"] == "Yes"),
+        ("Processing operation described", not is_missing_text(inputs["processing_description"])),
+        ("Operational context described", not is_missing_text(inputs["processing_context"])),
+        ("Data strictly necessary", inputs["data_necessary"] == "Yes"),
+        ("Data minimisation demonstrated", inputs["data_minimisation"] == "Yes" and not is_missing_text(inputs["data_minimisation_reasoning"])),
+        ("Less intrusive alternatives assessed", inputs["alternatives_assessed"] == "Yes"),
+        ("Necessity reasoning provided", not is_missing_text(inputs["necessity_reasoning"])),
+        ("Retention limits defined", inputs["retention_limits"] == "Yes")
+    ]
+    passed = sum(1 for _, ok in checks if ok)
+    failed_items = [name for name, ok in checks if not ok]
+    audit = [{"Criterion": name, "Result": "Passed" if ok else "Failed"} for name, ok in checks]
+
+    blocking_criteria = {
+        "Purpose specific and explicit",
+        "Legal basis identified and adequate",
+        "Less intrusive alternatives assessed",
+        "Necessity reasoning provided"
+    }
+    blocking_failed = any(item in blocking_criteria for item in failed_items)
+
+    if blocking_failed or passed <= 5:
+        judgment = "Not demonstrated"
+    elif failed_items:
+        judgment = "Partially demonstrated"
+    else:
+        judgment = "Demonstrated"
+
+    return {
+        "judgment": judgment,
+        "audit_trail": audit,
+        "failed_items": failed_items,
+        "summary": "; ".join(failed_items) if failed_items else "All necessity criteria passed"
+    }
+
+
+def compute_information_gaps(inputs, risks=None, necessity_judgment=None, proportionality_judgment=None):
+    gaps = []
+    scoping = compute_ai_scoping(inputs)
+
+    if scoping["classification_gap"]:
+        gaps.append({
+            "Gap": "AI Act classification unresolved",
+            "Why it matters": "The assessment cannot determine with confidence whether AI Act high-risk modules must be opened.",
+            "Who should provide information": "Legal / technical governance team",
+            "Required action": "Document whether the object is an AI system, GPAI model, GPAI-based system, and whether Article 6 high-risk classification applies.",
+            "Effect on auditability": "AI Act scoping incomplete"
+        })
+
+    if inputs.get("ai_object_type") == "AI system based on a GPAI model":
+        gaps.append({
+            "Gap": "GPAI-based system documentation needed",
+            "Why it matters": "The deployer/controller may need provider information on model limitations, intended use, data quality and instructions for use.",
+            "Who should provide information": "Provider / model supplier / technical team",
+            "Required action": "Request model/system documentation, instructions for use, limitations, known risks and mitigation measures.",
+            "Effect on auditability": "Residual risk and proportionality may be difficult to verify"
+        })
+
+    if inputs.get("show_deployer_module") and inputs.get("provider_article13_info_used") in ["No", "To be verified"]:
+        gaps.append({
+            "Gap": "Provider information/instructions missing for deployer-side assessment",
+            "Why it matters": "The deployer cannot fully assess concrete deployment risks, human oversight and risk materialisation measures without provider information.",
+            "Who should provide information": "Provider",
+            "Required action": "Request instructions for use, risk-management information and relevant technical documentation.",
+            "Effect on auditability": "Article 27 assessment incomplete"
+        })
+
+    if inputs.get("data_quality_assessed") in ["No", "To be verified"] or no_measure_selected(inputs.get("data_quality_measures", [])):
+        gaps.append({
+            "Gap": "Data quality evidence missing or insufficient",
+            "Why it matters": "Data quality is necessary to verify discrimination risk, reliability of outputs and proportionality of the processing.",
+            "Who should provide information": "Data governance lead / technical team / provider where relevant",
+            "Required action": "Document data sources, representativeness, limitations, synthetic data use, bias controls and error correction procedures.",
+            "Effect on auditability": "Safeguards and residual risk cannot be fully verified"
+        })
+
+    if inputs.get("affected_groups_consulted") == "Yes" and inputs.get("stakeholder_governance_response") != "Yes":
+        gaps.append({
+            "Gap": "Stakeholder consultation lacks documented governance response",
+            "Why it matters": "Stakeholder engagement is not complete unless concerns, accepted/rejected recommendations and mitigation responses are documented.",
+            "Who should provide information": "Assessment owner / governance body",
+            "Required action": "Document concerns raised, recommendations accepted/rejected, mitigation measures introduced, unresolved issues and reasons for non-integration of feedback.",
+            "Effect on auditability": "Stakeholder engagement cannot be treated as meaningful or complete"
+        })
+
+    return gaps
+
+
+def compute_stakeholder_escalations(inputs):
+    if inputs.get("affected_groups_consulted") != "Yes":
+        return []
+    rows = []
+    for trigger in inputs.get("stakeholder_escalation_triggers", []):
+        rows.append({
+            "Condition": trigger,
+            "Escalation consequence": STAKEHOLDER_ESCALATION_MAP.get(trigger, "Governance review"),
+            "Governance relevance": "Stakeholder-based escalation trigger"
+        })
+    if inputs.get("stakeholder_governance_response") != "Yes":
+        rows.append({
+            "Condition": "Stakeholder engagement without documented governance response",
+            "Escalation consequence": "Governance escalation",
+            "Governance relevance": "Engagement cannot be considered complete"
+        })
+    return rows
+
+
+def compute_proportionality_judgment(inputs, risks, flags, information_gaps=None, stakeholder_escalations=None):
+    information_gaps = information_gaps or []
+    stakeholder_escalations = stakeholder_escalations or []
+    risk_ids = {risk["ID"] for risk in risks}
+
+    significant_decision = inputs["decision_effect"] in [
+        "Legal or similarly significant effect",
+        "Access/exclusion/priority in services or opportunities"
+    ]
+    vulnerable_context = (
+        inputs["vulnerable_subjects"] == "Yes"
+        or inputs["power_asymmetry"] == "Yes"
+        or any(group in inputs["groups"] for group in [
+            "Children", "Migrants/asylum seekers", "Persons with disabilities",
+            "Protected or vulnerable groups", "Welfare beneficiaries", "Patients"
+        ])
+    )
+
+    checks = [
+        ("Proportionality reasoning provided", not is_missing_text(inputs["proportionality_reasoning"])),
+        ("Risks identified and linked to rights", len(risks) > 0 or inputs["dpia_risk_to_rights"] == "Low"),
+        ("Residual DPIA risk acceptable or justified", inputs["dpia_high_risk"] != "Yes" and inputs["dpia_risk_to_rights"] not in ["High", "Very high"]),
+        ("Concrete data-quality safeguards defined", not no_measure_selected(inputs["data_quality_measures"]) and inputs["data_quality_residual_risk"] not in ["High", "Very high"]),
+        ("Human oversight effective where needed", not significant_decision or (inputs["human_oversight"] == "Effective" and not no_measure_selected(inputs["human_oversight_measures"]))),
+        ("Contestability and remedy effective where needed", not significant_decision or (inputs["contestability"] == "Yes" and inputs["remedy_effectiveness"] == "Yes" and not no_measure_selected(inputs["contestability_measures"]))),
+        ("Vulnerable groups or power asymmetry addressed", not vulnerable_context or (inputs["affected_groups_consulted"] in ["Yes", "Not applicable"] and inputs["contestability"] == "Yes")),
+        ("Discrimination safeguards demonstrated where relevant", "FR2" not in risk_ids or inputs["bias_control"] == "Yes"),
+        ("No unresolved auditability gaps", len(information_gaps) == 0),
+        ("No stakeholder escalation preventing closure", not any(row["Escalation consequence"] in ["Redesign", "External review", "Governance escalation"] for row in stakeholder_escalations))
+    ]
+
+    passed = sum(1 for _, ok in checks if ok)
+    failed_items = [name for name, ok in checks if not ok]
+    audit = [{"Criterion": name, "Result": "Passed" if ok else "Failed"} for name, ok in checks]
+
+    blocking_failed = any(item in failed_items for item in [
+        "Proportionality reasoning provided",
+        "Contestability and remedy effective where needed",
+        "No stakeholder escalation preventing closure"
+    ])
+
+    if blocking_failed or passed <= 6:
+        judgment = "Not demonstrated"
+    elif failed_items:
+        judgment = "Partially demonstrated"
+    else:
+        judgment = "Demonstrated"
+
+    return {
+        "judgment": judgment,
+        "audit_trail": audit,
+        "failed_items": failed_items,
+        "summary": "; ".join(failed_items) if failed_items else "All proportionality criteria passed"
+    }
+
+
+def compute_embedded_judgment_flags(necessity_judgment, proportionality_judgment, information_gaps, stakeholder_escalations):
+    flags = []
+    if necessity_judgment["judgment"] == "Not demonstrated":
+        flags.append(("BLOCKING", "Necessity judgment: necessity is not demonstrated. The processing should be redesigned or cannot proceed until necessity is evidenced."))
+    elif necessity_judgment["judgment"] == "Partially demonstrated":
+        flags.append(("HIGH", "Necessity judgment: necessity is only partially demonstrated. Additional justification or less intrusive alternatives analysis is required."))
+
+    if proportionality_judgment["judgment"] == "Not demonstrated":
+        flags.append(("BLOCKING", "Proportionality judgment: proportionality is not demonstrated. Identified risks, safeguards, residual risk or stakeholder concerns prevent fair balancing from being verified."))
+    elif proportionality_judgment["judgment"] == "Partially demonstrated":
+        flags.append(("HIGH", "Proportionality judgment: proportionality is only partially demonstrated. Additional safeguards, evidence or governance review is required."))
+
+    if information_gaps:
+        flags.append(("MEDIUM", "Information gaps: missing information affects auditability and should be resolved or explicitly escalated before final risk acceptance."))
+
+    for row in stakeholder_escalations:
+        consequence = row["Escalation consequence"]
+        if consequence == "Redesign":
+            flags.append(("BLOCKING", f"Stakeholder escalation: {row['Condition']} requires redesign."))
+        elif consequence in ["External review", "Governance escalation", "Temporary conditional-go"]:
+            flags.append(("HIGH", f"Stakeholder escalation: {row['Condition']} requires {consequence}."))
+        else:
+            flags.append(("MEDIUM", f"Stakeholder escalation: {row['Condition']} requires {consequence}."))
+
+    return flags
+
+
+def build_information_gaps_df(information_gaps):
+    return pd.DataFrame(information_gaps)
+
+
+def build_stakeholder_escalations_df(stakeholder_escalations):
+    return pd.DataFrame(stakeholder_escalations)
+
 def compute_outcome(flags, scrutiny_level, necessity_judgment=None, proportionality_judgment=None, information_gaps=None):
     levels = [level for level, _ in flags]
+    necessity_judgment = necessity_judgment or {"judgment": "Not computed"}
+    proportionality_judgment = proportionality_judgment or {"judgment": "Not computed"}
+    information_gaps = information_gaps or []
 
-    if necessity_judgment and necessity_judgment["judgment"] == "Not demonstrated":
-        return "NO-GO / redesign required: necessity is not demonstrated"
+    if necessity_judgment.get("judgment") == "Not demonstrated":
+        return "NO-GO / redesign required because necessity is not demonstrated"
 
-    if proportionality_judgment and proportionality_judgment["judgment"] == "Not demonstrated":
-        return "NO-GO / redesign required: proportionality is not demonstrated"
+    if proportionality_judgment.get("judgment") == "Not demonstrated":
+        return "NO-GO / redesign required because proportionality is not demonstrated"
 
     if "BLOCKING" in levels:
         return "NO-GO / redesign required before deployment"
 
-    if information_gaps and len(information_gaps) > 0 and scrutiny_level in ["High", "Very high"]:
-        return "ESCALATE / DPIA cannot be closed until information gaps are resolved"
+    if information_gaps and (necessity_judgment.get("judgment") != "Demonstrated" or proportionality_judgment.get("judgment") != "Demonstrated"):
+        return "ESCALATE / DPIA cannot be closed until key information gaps are resolved"
 
-    if necessity_judgment and necessity_judgment["judgment"] == "Partially demonstrated":
-        return "CONDITIONAL GO / additional necessity evidence required"
-
-    if proportionality_judgment and proportionality_judgment["judgment"] == "Partially demonstrated":
-        return "CONDITIONAL GO / additional safeguards or proportionality evidence required"
+    if necessity_judgment.get("judgment") == "Partially demonstrated" or proportionality_judgment.get("judgment") == "Partially demonstrated":
+        return "CONDITIONAL GO with additional evidence, safeguards or governance escalation"
 
     if "HIGH" in levels:
         return "CONDITIONAL GO with mandatory safeguards and escalation"
@@ -1659,8 +1663,12 @@ def build_mitigation_action_plan(risks, inputs, flags):
 
 
 def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia_missing, coherence_warnings, final_decision_log, necessity_judgment=None, proportionality_judgment=None, information_gaps=None, stakeholder_escalations=None):
-    is_provider = is_provider_role(inputs)
-    is_deployer = is_deployer_role(inputs)
+    is_provider = inputs.get("show_provider_module", is_provider_role(inputs))
+    is_deployer = inputs.get("show_deployer_module", is_deployer_role(inputs))
+    necessity_judgment = necessity_judgment or {"judgment": "Not computed", "audit_trail": []}
+    proportionality_judgment = proportionality_judgment or {"judgment": "Not computed", "audit_trail": []}
+    information_gaps = information_gaps or []
+    stakeholder_escalations = stakeholder_escalations or []
 
     report = []
 
@@ -1668,19 +1676,12 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
     report.append("")
     report.append(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     report.append("")
-
-    information_gaps = information_gaps or []
-    stakeholder_escalations = stakeholder_escalations or []
-
     report.append("## 0. AI Act scoping checklist")
-    report.append(f"- AI system status: {inputs.get('ai_system_status', 'Not assessed')}")
-    report.append(f"- Object assessed: {inputs.get('ai_object_type', 'Not assessed')}")
-    report.append(f"- GPAI systemic-risk relevance: {inputs.get('gpai_systemic_risk', 'Not assessed')}")
-    report.append(f"- High-risk relevance: {inputs.get('high_risk_relevance', 'Not assessed')}")
-    report.append(f"- Scoping reasoning: {inputs.get('ai_scoping_reasoning', '')}")
-    if inputs.get('ai_scoping_result'):
-        report.append(f"- Scoping result: {inputs['ai_scoping_result'].get('AI Act scoping result')}")
-        report.append(f"- Module consequence: {inputs['ai_scoping_result'].get('AI Act module consequence')}")
+    report.append(f"- Object of assessment: {inputs.get('ai_object_type', 'Not recorded')}")
+    report.append(f"- GPAI model status: {inputs.get('gpai_model_status', 'Not recorded')}")
+    report.append(f"- Article 6 high-risk classification: {inputs.get('high_risk_classification', 'Not recorded')}")
+    report.append(f"- Provider-side Article 9 module opened: {inputs.get('show_provider_module', False)}")
+    report.append(f"- Deployer-side Article 27 module opened: {inputs.get('show_deployer_module', False)}")
     report.append("")
 
     report.append("## 1. Assessment scope")
@@ -1735,21 +1736,23 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
     report.append(f"- Necessity reasoning: {inputs['necessity_reasoning']}")
     report.append(f"- Proportionality reasoning: {inputs['proportionality_reasoning']}")
     report.append("")
-
-    report.append("### 2.6A Computed necessity and proportionality judgments")
-    if necessity_judgment:
-        report.append(f"- Necessity judgment: {necessity_judgment['judgment']}")
-        for row in necessity_judgment["audit_trail"]:
-            report.append(f"  - {row['Criterion']}: {row['Result']} ({row['Evidence / reason']})")
-    if proportionality_judgment:
-        report.append(f"- Proportionality judgment: {proportionality_judgment['judgment']}")
-        for row in proportionality_judgment["audit_trail"]:
-            report.append(f"  - {row['Criterion']}: {row['Result']} ({row['Evidence / reason']})")
-    report.append("")
     report.append("### 2.7 DPIA baseline risk assessment")
     report.append(f"- Baseline DPIA risk to rights and freedoms: {inputs['dpia_risk_to_rights']}")
     report.append(f"- Processing remains likely high-risk after initial safeguards: {inputs['dpia_high_risk']}")
     report.append(f"- DPIA risk description: {inputs['dpia_risk_description']}")
+    report.append("")
+    report.append("## 2B. Embedded necessity and proportionality judgments")
+    report.append(f"- Necessity judgment: {necessity_judgment['judgment']}")
+    report.append(f"- Necessity summary: {necessity_judgment.get('summary', '')}")
+    report.append("### Necessity audit trail")
+    for row in necessity_judgment.get("audit_trail", []):
+        report.append(f"- {row['Criterion']}: {row['Result']}")
+    report.append("")
+    report.append(f"- Proportionality judgment: {proportionality_judgment['judgment']}")
+    report.append(f"- Proportionality summary: {proportionality_judgment.get('summary', '')}")
+    report.append("### Proportionality audit trail")
+    for row in proportionality_judgment.get("audit_trail", []):
+        report.append(f"- {row['Criterion']}: {row['Result']}")
     report.append("")
 
     report.append("## 3. Decision-making and fundamental-rights context")
@@ -1781,17 +1784,26 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
     report.append(f"- Residual risk after contestability measures: {inputs['contestability_residual_risk']}")
     report.append(f"- Affected groups consulted: {inputs['affected_groups_consulted']}")
     report.append(f"- Contestability notes: {inputs['contestability_notes']}")
-    if inputs.get("affected_groups_consulted") == "Yes":
-        report.append("### 4.3A Stakeholder engagement and governance response")
-        report.append(f"- Stakeholder concerns raised: {inputs.get('stakeholder_concerns', '')}")
-        report.append(f"- Accepted or rejected recommendations: {inputs.get('stakeholder_recommendations', '')}")
-        report.append(f"- Mitigation measures introduced: {inputs.get('stakeholder_mitigation_measures', '')}")
-        report.append(f"- Unresolved issues: {inputs.get('stakeholder_unresolved_issues', '')}")
-        report.append(f"- Justification for non-integration of feedback: {inputs.get('stakeholder_non_integration_justification', '')}")
-        report.append(f"- Governance response: {inputs.get('stakeholder_governance_response', '')}")
     report.append("")
     report.append("### 4.4 Governance")
     report.append(f"- Governance notes: {inputs['governance_notes']}")
+    report.append("")
+    report.append("## 4B. Stakeholder engagement and governance response")
+    report.append(f"- Affected groups or representatives consulted: {inputs.get('affected_groups_consulted', 'Not recorded')}")
+    if inputs.get("affected_groups_consulted") == "Yes":
+        report.append(f"- Stakeholder concerns raised: {inputs.get('stakeholder_concerns', '')}")
+        report.append(f"- Accepted recommendations: {inputs.get('stakeholder_accepted_recommendations', '')}")
+        report.append(f"- Rejected recommendations: {inputs.get('stakeholder_rejected_recommendations', '')}")
+        report.append(f"- Mitigation measures introduced after consultation: {inputs.get('stakeholder_mitigations', '')}")
+        report.append(f"- Unresolved issues: {inputs.get('stakeholder_unresolved_issues', '')}")
+        report.append(f"- Justification for non-integration of feedback: {inputs.get('stakeholder_non_integration_justification', '')}")
+        report.append(f"- Governance response documented: {inputs.get('stakeholder_governance_response', '')}")
+        if stakeholder_escalations:
+            report.append("### Stakeholder-based escalation triggers")
+            for row in stakeholder_escalations:
+                report.append(f"- {row['Condition']} → {row['Escalation consequence']}")
+    else:
+        report.append("- Stakeholder engagement documentation: not applicable or not conducted.")
     report.append("")
 
     if is_provider:
@@ -1844,6 +1856,14 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
     )
     report.append("")
 
+    report.append("## 6C. Information gaps affecting auditability")
+    if not information_gaps:
+        report.append("No information gaps recorded.")
+    else:
+        for gap in information_gaps:
+            report.append(f"- {gap['Gap']}: {gap['Required action']} ({gap['Effect on auditability']})")
+    report.append("")
+
     report.append("## 7. Red flags and coherence warnings")
     if not flags:
         report.append("No red flags detected.")
@@ -1854,22 +1874,6 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
     if coherence_warnings:
         for warning in coherence_warnings:
             report.append(f"- [COHERENCE] {warning}")
-    report.append("")
-
-    report.append("## 7B. Information gaps affecting auditability")
-    if not information_gaps:
-        report.append("No information gaps recorded.")
-    else:
-        for gap in information_gaps:
-            report.append(f"- {gap['Information gap']} | Why it matters: {gap['Why it matters']} | Required action: {gap['Required action']} | Owner: {gap['Information owner']}")
-    report.append("")
-
-    report.append("## 7C. Stakeholder-based escalation triggers")
-    if not stakeholder_escalations:
-        report.append("No stakeholder-based escalation triggers recorded.")
-    else:
-        for row in stakeholder_escalations:
-            report.append(f"- {row['Condition']} → {row['Escalation consequence']}")
     report.append("")
 
     report.append("## 8. Scrutiny and recommended outcome")
@@ -1887,14 +1891,13 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
 
     report.append("## Methodological note")
     report.append(
-        "This tool does not automate constitutional judgment. It starts from a full DPIA core analysis. "
-        "The DPIA operates as the common procedural backbone: it describes the processing, tests legal basis, "
-        "purpose limitation, data minimisation, transparency, data-subject rights, necessity, proportionality "
-        "and baseline risk to rights and freedoms. Necessity and proportionality are computed as auditable legal "
-        "judgments and directly affect the recommended outcome. Article 9 and Article 27 remain distinct "
-        "role-triggered AI Act obligations: when opened, their outputs feed the same DPIA-based reasoning on "
-        "risks, safeguards, necessity, proportionality, accountability and contestability. Information that belongs "
-        "to another actor is recorded as an information gap affecting auditability, not as automatic non-compliance by the filer."
+        "This tool does not automate constitutional judgment. It uses the DPIA as the common methodological "
+        "backbone while preserving Article 9 AI Act and Article 27 AI Act as distinct role-triggered obligations. "
+        "Necessity and proportionality are embedded in the decision engine as auditable legal judgments, not merely "
+        "narrative fields. Provider-side and deployer-side inputs, when the relevant modules are opened, feed the same "
+        "risk, safeguard, residual-risk, accountability, contestability, necessity and proportionality reasoning. "
+        "Information gaps are recorded separately from omissions, so the assessment can show which actor must provide "
+        "missing evidence before governance actors accept residual risk."
     )
 
     return "\n".join(report)
@@ -1907,42 +1910,24 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
 with st.expander("Methodological logic", expanded=True):
     st.markdown(
         """
-        This tool starts from a **full DPIA core analysis**.
+        This tool is a **research prototype** developed for the DIGCON Fundamental Rights Assessment Sandbox.
 
-        The DPIA operates as the **common procedural backbone**. It describes the processing
-        operation and tests:
+        It uses the **DPIA as the common methodological backbone**. The DPIA remains the core procedural structure for describing the processing operation, identifying affected persons, assessing risks to rights and freedoms, testing safeguards, and documenting accountability.
 
-        - legal basis;
-        - purpose limitation and compatibility;
-        - data minimisation;
-        - data-subject categories and vulnerabilities;
-        - transparency and data-subject rights;
-        - necessity and proportionality;
-        - baseline risk to rights and freedoms.
+        **Article 9 AI Act and Article 27 AI Act remain distinct legal obligations.** They are not absorbed into the DPIA. Instead, they are opened only when the role of the filer and the AI Act scoping trigger them:
 
-        The tool then adds a **fundamental-rights legal risk selection layer**, focused on:
+        - the **Article 9 provider-side module** opens when the filer acts as provider or joint assessment team and the system is classified as high-risk under Article 6 AI Act;
+        - the **Article 27 deployer-side module** opens when the filer acts as deployer or joint assessment team and the system is classified as high-risk under Article 6 AI Act.
 
-        - the decision-making context;
-        - persons and groups affected;
-        - legal mechanisms of harm;
-        - safeguards, remedies and accountability.
+        Their outputs feed the same integrated assessment logic: risk identification, safeguards, residual risk, accountability, contestability, necessity and proportionality.
 
-        The mitigation layer tests whether identified risks are addressed through three minimum safeguards:
+        **Necessity and proportionality are not treated as narrative fields.** They are computed as auditable legal judgments.
 
-        - **data quality**;
-        - **meaningful human oversight**;
-        - **effective contestability**.
+        The **necessity judgment** verifies whether the purpose is sufficiently specific, the legal basis is identified, the processing is described, the data are strictly necessary, data minimisation is demonstrated, and less intrusive alternatives have been assessed.
 
-        **Provider-side Article 9 add-on** opens only if the filer includes a provider role.
-        It asks about health and safety risk, fundamental-rights risk, intended purpose,
-        reasonably foreseeable misuse, post-market monitoring and targeted risk-management measures.
+        The **proportionality judgment** verifies whether the interference with rights and freedoms can be justified in light of the identified risks, affected persons and groups, safeguards, residual risks, human oversight, contestability, stakeholder concerns and information gaps.
 
-        **Deployer-side Article 27 add-on** opens only if the filer includes a deployer role.
-        It focuses on the specific deployment process, period and frequency of use,
-        affected categories, specific harms, human oversight, governance and complaint mechanisms.
-
-        Article 9 and Article 27 do **not** duplicate the DPIA. They only add role-specific
-        AI Act features that feed the fundamental-rights analysis.
+        The tool does not automate constitutional judgment. It structures the evidence, records the reasoning, identifies information gaps, and generates an audit trail for governance review.
         """
     )
 
@@ -1951,54 +1936,86 @@ with st.form("assessment_form"):
 
     st.markdown(
         """
-        This preliminary scoping does not replace the DPIA. It clarifies whether the object assessed is likely to be an AI system,
-        a GPAI model, or an AI system based on a GPAI model. The result determines which role-triggered AI Act modules should open.
-        If the tool is likely not AI, the DPIA continues where personal data are processed, but Article 9 and Article 27 AI Act modules do not open.
+        This preliminary scoping step clarifies what is being assessed. It does not replace the DPIA.
+        It determines whether the object is an AI system, a GPAI model, an AI system based on a GPAI model,
+        and whether high-risk AI Act modules should open.
         """
     )
 
-    with st.expander("Info: examples for AI system, GPAI model and GPAI-based system", expanded=False):
+    with st.expander("Info: AI system, GPAI model and GPAI-based system", expanded=False):
         st.markdown(
             """
-            - **Usually not AI**: a static spreadsheet, a dashboard, a database query, or software that only follows predefined human-coded rules.
-            - **AI system**: a CV-screening tool that ranks candidates, a clinical decision-support tool, a credit scoring system, or a content-ranking recommender.
-            - **GPAI model**: the underlying general-purpose model itself, such as a large language model that can perform many different tasks.
-            - **AI system based on a GPAI model**: a recruitment chatbot, customer-service assistant, or legal drafting service built on top of a GPAI model.
-            - **High-risk AI system** depends mainly on where and how the system is used, for example employment, education, welfare, credit, healthcare, migration, justice or access to essential services.
-            - **Systemic-risk GPAI** concerns the scale, capabilities and potential societal impact of the model itself, not one specific deployment context.
+            **Not an AI system**: static spreadsheet, ordinary database query, simple dashboard, or predefined rule execution without inference.
+
+            **AI system**: a machine-based system that infers outputs such as predictions, scores, recommendations, classifications, content or decisions that can influence a physical or virtual environment.
+
+            **GPAI model**: the underlying general-purpose model itself, capable of performing a wide range of tasks and being integrated into many downstream systems.
+
+            **AI system based on a GPAI model**: a deployable application or service built on top of a GPAI model, for example a recruitment chatbot or decision-support tool based on a large language model.
+            """
+        )
+
+    with st.expander("Info: high-risk classification under Article 6 AI Act", expanded=False):
+        st.markdown(
+            """
+            Article 6 AI Act creates two distinct pathways to high-risk classification.
+
+            **1. AI embedded in regulated products — Article 6(1)**  
+            The AI system is a safety component of a product already regulated by sectoral product-safety legislation.
+
+            Examples: medical devices, machinery, automotive, aviation, rail.
+
+            **Logic:** product safety.
+
+            **2. Standalone AI systems — Article 6(2) + Annex III**  
+            The AI system is listed in Annex III, based on its intended purpose and potential impact on persons and fundamental rights.
+
+            Examples: recruitment, education, law enforcement, migration, access to essential services.
+
+            **Logic:** fundamental rights and societal impact.
+
+            If classification is uncertain, the assessment should record a classification gap and require legal/technical review.
             """
         )
 
     col0a, col0b = st.columns(2)
 
     with col0a:
-        ai_system_status = st.selectbox(
-            "Is the tool likely to qualify as an AI system?",
-            AI_SCOPING_STATUS_OPTIONS,
-            help="Ask whether the tool is machine-based, has some autonomy, infers outputs from inputs and can influence a physical or virtual environment."
+        ai_object_type = st.selectbox(
+            "What is the object of the assessment?",
+            AI_OBJECT_TYPES,
+            index=AI_OBJECT_TYPES.index("AI system")
         )
 
-        ai_object_type = st.selectbox(
-            "What is the object assessed?",
-            AI_OBJECT_TYPES
+        gpai_model_status = st.selectbox(
+            "If a GPAI model is involved, what is its status?",
+            GPAI_MODEL_STATUS,
+            index=GPAI_MODEL_STATUS.index("Not applicable")
         )
 
     with col0b:
-        gpai_systemic_risk = st.selectbox(
-            "If it is a GPAI model: is there systemic-risk relevance?",
-            GPAI_SYSTEMIC_RISK_OPTIONS
+        high_risk_classification = st.selectbox(
+            "High-risk classification under Article 6 AI Act",
+            HIGH_RISK_CLASSIFICATION,
+            index=HIGH_RISK_CLASSIFICATION.index("Classification unclear — legal/technical review required")
         )
 
-        high_risk_relevance = st.selectbox(
-            "Is there potential high-risk AI relevance?",
-            HIGH_RISK_RELEVANCE_OPTIONS
+    if ai_object_type == "Not an AI system":
+        st.info(
+            "The AI Act high-risk modules will not open. The DPIA continues where personal data processing exists."
         )
-
-    ai_scoping_reasoning = st.text_area(
-        "AI Act scoping reasoning",
-        "",
-        placeholder="Explain why the tool is or is not AI; whether it is a GPAI model or a GPAI-based system; and why high-risk relevance is or is not present."
-    )
+    elif high_risk_classification == "Not high-risk under Article 6 AI Act":
+        st.info(
+            "The DPIA continues. Article 9 and Article 27 high-risk AI modules will not open, but other AI Act obligations may still require separate assessment."
+        )
+    elif high_risk_classification.startswith("High-risk"):
+        st.success(
+            "High-risk AI Act classification selected. Role-triggered Article 9 and/or Article 27 modules will open according to the filer role."
+        )
+    else:
+        st.warning(
+            "AI Act classification is unclear. The tool records an information gap and requires legal/technical review before final closure."
+        )
 
     st.header("1. Assessment scope")
 
@@ -2390,53 +2407,56 @@ with st.form("assessment_form"):
         )
 
     if affected_groups_consulted == "Yes":
-        st.subheader("4.3A Stakeholder consultation documentation and governance response")
-        st.markdown(
-            """
-            Stakeholder engagement is not considered complete where no governance response has been documented.
-            The assessment should record the concerns raised, accepted or rejected recommendations, mitigation measures,
-            unresolved issues and the justification for not integrating feedback.
-            """
-        )
-        stakeholder_concerns = st.text_area(
-            "Stakeholder concerns raised",
-            "",
-            placeholder="Describe the concerns raised by affected groups, representatives, civil society, workers' representatives, experts or trusted actors."
-        )
-        stakeholder_recommendations = st.text_area(
-            "Accepted or rejected recommendations",
-            "",
-            placeholder="List recommendations received and indicate whether each was accepted, rejected or partially integrated."
-        )
-        stakeholder_mitigation_measures = st.text_area(
-            "Mitigation measures introduced following stakeholder input",
-            "",
-            placeholder="Describe any safeguard, process change, monitoring duty or remedy introduced because of stakeholder feedback."
-        )
-        stakeholder_unresolved_issues = st.text_area(
-            "Unresolved issues",
-            "",
-            placeholder="Describe concerns that remain unresolved after the consultation."
-        )
-        stakeholder_non_integration_justification = st.text_area(
-            "Justification for non-integration of feedback",
-            "",
-            placeholder="Explain why any recommendation was rejected or not integrated."
-        )
-        stakeholder_governance_response = st.text_area(
-            "Governance response to stakeholder concerns",
-            "",
-            placeholder="Explain which governance actor reviewed the feedback, what decision was taken, and how the response is documented."
-        )
-        stakeholder_escalation_triggers = st.multiselect(
-            "Stakeholder-based escalation triggers",
-            STAKEHOLDER_ESCALATION_TRIGGERS,
-            default=[]
-        )
+        with st.expander("Stakeholder consultation documentation and governance response", expanded=True):
+            st.markdown(
+                """
+                Stakeholder engagement is not considered complete unless governance actors document how concerns were considered and how feedback affected the assessment, safeguards or decision.
+                """
+            )
+            stakeholder_concerns = st.text_area(
+                "Stakeholder concerns raised",
+                "",
+                placeholder="Describe concerns raised by affected groups, representatives, civil society, worker representatives, trusted flaggers or other trusted actors."
+            )
+            stakeholder_accepted_recommendations = st.text_area(
+                "Accepted recommendations",
+                "",
+                placeholder="Which recommendations were accepted and how were they integrated into safeguards, design, governance or monitoring?"
+            )
+            stakeholder_rejected_recommendations = st.text_area(
+                "Rejected recommendations",
+                "",
+                placeholder="Which recommendations were rejected?"
+            )
+            stakeholder_mitigations = st.text_area(
+                "Mitigation measures introduced after consultation",
+                "",
+                placeholder="Describe concrete safeguards, redesign measures, escalation routes or monitoring duties introduced because of stakeholder feedback."
+            )
+            stakeholder_unresolved_issues = st.text_area(
+                "Unresolved issues",
+                "",
+                placeholder="List concerns that remain unresolved after consultation."
+            )
+            stakeholder_non_integration_justification = st.text_area(
+                "Justification for non-integration of feedback",
+                "",
+                placeholder="Explain why any stakeholder feedback was not integrated."
+            )
+            stakeholder_governance_response = st.selectbox(
+                "Has a governance response to stakeholder concerns been documented?",
+                YES_NO_OPTIONS
+            )
+            stakeholder_escalation_triggers = st.multiselect(
+                "Stakeholder-based escalation triggers",
+                STAKEHOLDER_ESCALATION_TRIGGERS,
+                default=[]
+            )
     else:
         stakeholder_concerns = "Not applicable"
-        stakeholder_recommendations = "Not applicable"
-        stakeholder_mitigation_measures = "Not applicable"
+        stakeholder_accepted_recommendations = "Not applicable"
+        stakeholder_rejected_recommendations = "Not applicable"
+        stakeholder_mitigations = "Not applicable"
         stakeholder_unresolved_issues = "Not applicable"
         stakeholder_non_integration_justification = "Not applicable"
         stakeholder_governance_response = "Not applicable"
@@ -2462,27 +2482,23 @@ with st.form("assessment_form"):
         )
     )
 
-    preliminary_ai_inputs = {
-        "ai_system_status": ai_system_status,
-        "ai_object_type": ai_object_type,
-        "gpai_systemic_risk": gpai_systemic_risk,
-        "high_risk_relevance": high_risk_relevance
-    }
+    is_ai_relevant_for_modules = ai_object_type != "Not an AI system"
+    is_high_risk_for_modules = high_risk_classification in [
+        "High-risk under Article 6(1) AI Act — AI embedded in regulated product",
+        "High-risk under Article 6(2) AI Act — standalone Annex III AI system"
+    ]
 
     show_provider_module = (
-        ("Provider" in filer_role or "Joint assessment team" in filer_role)
-        and ai_act_modules_relevant(preliminary_ai_inputs)
+        is_ai_relevant_for_modules
+        and is_high_risk_for_modules
+        and ("Provider" in filer_role or "Joint assessment team" in filer_role)
     )
 
     show_deployer_module = (
-        ("Deployer" in filer_role or "Joint assessment team" in filer_role)
-        and ai_act_modules_relevant(preliminary_ai_inputs)
+        is_ai_relevant_for_modules
+        and is_high_risk_for_modules
+        and ("Deployer" in filer_role or "Joint assessment team" in filer_role)
     )
-
-    if ai_system_status == "Likely not an AI system":
-        st.info("AI Act role-triggered modules are not opened because the tool is marked as likely not AI. The DPIA continues where personal data are processed.")
-    elif ("Provider" in filer_role or "Deployer" in filer_role or "Joint assessment team" in filer_role) and not ai_act_modules_relevant(preliminary_ai_inputs):
-        st.info("AI Act role-triggered modules are not opened because high-risk AI relevance is not currently identified. Record this classification in the DPIA audit trail.")
 
     if show_provider_module:
         st.header("5A. Provider-side AI Act Article 9 add-on")
@@ -2554,6 +2570,11 @@ with st.form("assessment_form"):
                 "Explain health/safety risks, fundamental-rights risks, misuse scenarios, "
                 "post-market feedback, targeted measures and residual risk."
             )
+        )
+
+        st.info(
+            "Stakeholder concerns, if collected, should be considered in the provider-side risk-management review, "
+            "especially where they reveal foreseeable misuse, fundamental-rights risks, health/safety concerns or residual-risk issues."
         )
 
     else:
@@ -2646,6 +2667,11 @@ with st.form("assessment_form"):
             )
         )
 
+        st.info(
+            "Stakeholder concerns, if collected, should inform the deployer-side assessment of concrete deployment risks, "
+            "affected groups, human oversight, risk-materialisation measures and complaint mechanisms."
+        )
+
     else:
         deployer_process_description = "Not applicable"
         deployment_period = "Not applicable"
@@ -2662,29 +2688,18 @@ with st.form("assessment_form"):
 
 
 if submitted:
-    ai_scoping_inputs = {
-        "ai_system_status": ai_system_status,
-        "ai_object_type": ai_object_type,
-        "gpai_systemic_risk": gpai_systemic_risk,
-        "high_risk_relevance": high_risk_relevance,
-        "ai_scoping_reasoning": ai_scoping_reasoning
-    }
-    ai_scoping_result = compute_ai_scoping(ai_scoping_inputs)
-
     inputs = {
-        "ai_system_status": ai_system_status,
-        "ai_object_type": ai_object_type,
-        "gpai_systemic_risk": gpai_systemic_risk,
-        "high_risk_relevance": high_risk_relevance,
-        "ai_scoping_reasoning": ai_scoping_reasoning,
-        "ai_scoping_result": ai_scoping_result,
-
         "project_name": project_name,
         "organisation": organisation,
         "filer_role": filer_role,
         "accountability_owner": accountability_owner,
         "legal_basis": legal_basis,
         "data_necessary": data_necessary,
+        "ai_object_type": ai_object_type,
+        "gpai_model_status": gpai_model_status,
+        "high_risk_classification": high_risk_classification,
+        "show_provider_module": show_provider_module,
+        "show_deployer_module": show_deployer_module,
 
         "purpose": purpose,
         "processing_description": processing_description,
@@ -2735,14 +2750,15 @@ if submitted:
         "contestability_notes": contestability_notes,
         "bias_control": bias_control,
         "affected_groups_consulted": affected_groups_consulted,
+        "governance_notes": governance_notes,
         "stakeholder_concerns": stakeholder_concerns,
-        "stakeholder_recommendations": stakeholder_recommendations,
-        "stakeholder_mitigation_measures": stakeholder_mitigation_measures,
+        "stakeholder_accepted_recommendations": stakeholder_accepted_recommendations,
+        "stakeholder_rejected_recommendations": stakeholder_rejected_recommendations,
+        "stakeholder_mitigations": stakeholder_mitigations,
         "stakeholder_unresolved_issues": stakeholder_unresolved_issues,
         "stakeholder_non_integration_justification": stakeholder_non_integration_justification,
         "stakeholder_governance_response": stakeholder_governance_response,
         "stakeholder_escalation_triggers": stakeholder_escalation_triggers,
-        "governance_notes": governance_notes,
 
         "provider_lifecycle_review": provider_lifecycle_review,
         "provider_health_safety_risk": provider_health_safety_risk,
@@ -2769,15 +2785,16 @@ if submitted:
 
     risks = activate_fundamental_rights_risks(inputs)
     base_flags = compute_red_flags(inputs, risks)
-    information_gaps = compute_information_gaps(inputs, risks)
-    necessity_judgment = compute_necessity_judgment(inputs)
-    proportionality_judgment = compute_proportionality_judgment(inputs, risks, information_gaps)
-    stakeholder_escalations = compute_stakeholder_escalations(inputs)
-    flags = base_flags + judgment_flags(necessity_judgment, proportionality_judgment, information_gaps, stakeholder_escalations)
-    scrutiny_level = compute_scrutiny_level(inputs, flags, risks)
-    outcome = compute_outcome(flags, scrutiny_level, necessity_judgment, proportionality_judgment, information_gaps)
     dpia_score, dpia_missing = compute_dpia_completeness(inputs)
     coherence_warnings = compute_coherence_warnings(inputs)
+    necessity_judgment = compute_necessity_judgment(inputs)
+    initial_information_gaps = compute_information_gaps(inputs, risks, necessity_judgment, None)
+    stakeholder_escalations = compute_stakeholder_escalations(inputs)
+    proportionality_judgment = compute_proportionality_judgment(inputs, risks, base_flags, initial_information_gaps, stakeholder_escalations)
+    information_gaps = compute_information_gaps(inputs, risks, necessity_judgment, proportionality_judgment)
+    flags = base_flags + compute_embedded_judgment_flags(necessity_judgment, proportionality_judgment, information_gaps, stakeholder_escalations)
+    scrutiny_level = compute_scrutiny_level(inputs, flags, risks)
+    outcome = compute_outcome(flags, scrutiny_level, necessity_judgment, proportionality_judgment, information_gaps)
 
     final_decision_log = {
         "Final decision": "To be decided",
@@ -2837,49 +2854,48 @@ if "last_assessment" in st.session_state:
         st.metric("DPIA completeness", f"{result['dpia_score']}%")
 
     with col_b:
-        st.metric("FR risks selected", len(result["risks"]))
-
-    with col_c:
-        st.metric("Red flags", len(result["flags"]))
-
-    with col_d:
-        st.metric("Scrutiny level", result["scrutiny_level"])
-
-    with col_e:
         st.metric("Necessity", result["necessity_judgment"]["judgment"])
 
-    with col_f:
+    with col_c:
         st.metric("Proportionality", result["proportionality_judgment"]["judgment"])
+
+    with col_d:
+        st.metric("FR risks selected", len(result["risks"]))
+
+    with col_e:
+        st.metric("Red flags", len(result["flags"]))
+
+    with col_f:
+        st.metric("Scrutiny level", result["scrutiny_level"])
 
     if result["dpia_missing"]:
         with st.expander("Missing or weak DPIA elements", expanded=False):
             for item in result["dpia_missing"]:
                 st.write("-", item)
 
-    st.subheader("AI Act scoping result")
-    st.write(result["inputs"].get("ai_scoping_result", {}).get("AI Act scoping result", "Not assessed"))
-    st.caption(result["inputs"].get("ai_scoping_result", {}).get("AI Act module consequence", ""))
+    st.subheader("Embedded necessity and proportionality judgments")
 
-    st.subheader("Auditable necessity and proportionality judgments")
-    col_np_1, col_np_2 = st.columns(2)
-    with col_np_1:
-        st.markdown(f"**Necessity judgment: {result['necessity_judgment']['judgment']}**")
-        st.dataframe(pd.DataFrame(result["necessity_judgment"]["audit_trail"]), use_container_width=True)
-    with col_np_2:
-        st.markdown(f"**Proportionality judgment: {result['proportionality_judgment']['judgment']}**")
-        st.dataframe(pd.DataFrame(result["proportionality_judgment"]["audit_trail"]), use_container_width=True)
+    with st.expander("Necessity audit trail", expanded=False):
+        st.write(f"**Judgment:** {result['necessity_judgment']['judgment']}")
+        st.write(result['necessity_judgment'].get('summary', ''))
+        st.dataframe(pd.DataFrame(result['necessity_judgment'].get('audit_trail', [])), use_container_width=True)
+
+    with st.expander("Proportionality audit trail", expanded=False):
+        st.write(f"**Judgment:** {result['proportionality_judgment']['judgment']}")
+        st.write(result['proportionality_judgment'].get('summary', ''))
+        st.dataframe(pd.DataFrame(result['proportionality_judgment'].get('audit_trail', [])), use_container_width=True)
 
     st.subheader("Information gaps affecting auditability")
     if result["information_gaps"]:
-        st.dataframe(pd.DataFrame(result["information_gaps"]), use_container_width=True)
+        st.dataframe(build_information_gaps_df(result["information_gaps"]), use_container_width=True)
     else:
         st.success("No information gaps recorded.")
 
     st.subheader("Stakeholder-based escalation triggers")
     if result["stakeholder_escalations"]:
-        st.dataframe(pd.DataFrame(result["stakeholder_escalations"]), use_container_width=True)
+        st.dataframe(build_stakeholder_escalations_df(result["stakeholder_escalations"]), use_container_width=True)
     else:
-        st.info("No stakeholder-based escalation triggers recorded.")
+        st.info("No stakeholder-based escalation trigger recorded.")
 
     st.subheader("Recommended outcome")
     st.markdown(f"**{result['outcome']}**")
@@ -3058,22 +3074,6 @@ if "last_assessment" in st.session_state:
             mime="text/csv"
         )
 
-    if result["information_gaps"]:
-        st.download_button(
-            "Download Information Gaps CSV",
-            pd.DataFrame(result["information_gaps"]).to_csv(index=False),
-            file_name=f"{safe_file_name}_information_gaps.csv",
-            mime="text/csv"
-        )
-
-    if result["stakeholder_escalations"]:
-        st.download_button(
-            "Download Stakeholder Escalations CSV",
-            pd.DataFrame(result["stakeholder_escalations"]).to_csv(index=False),
-            file_name=f"{safe_file_name}_stakeholder_escalations.csv",
-            mime="text/csv"
-        )
-
     updated_report = build_report(
         result["inputs"],
         result["risks"],
@@ -3089,6 +3089,22 @@ if "last_assessment" in st.session_state:
         result["information_gaps"],
         result["stakeholder_escalations"]
     )
+
+    if result["information_gaps"]:
+        st.download_button(
+            "Download Information Gaps CSV",
+            build_information_gaps_df(result["information_gaps"]).to_csv(index=False),
+            file_name=f"{safe_file_name}_information_gaps.csv",
+            mime="text/csv"
+        )
+
+    if result["stakeholder_escalations"]:
+        st.download_button(
+            "Download Stakeholder Escalations CSV",
+            build_stakeholder_escalations_df(result["stakeholder_escalations"]).to_csv(index=False),
+            file_name=f"{safe_file_name}_stakeholder_escalations.csv",
+            mime="text/csv"
+        )
 
     st.download_button(
         "Download Markdown report",
