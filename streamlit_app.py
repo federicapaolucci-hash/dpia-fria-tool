@@ -1,4 +1,7 @@
 import json
+import os
+import re
+import unicodedata
 from datetime import datetime
 
 import pandas as pd
@@ -741,7 +744,7 @@ def is_deployer_role(inputs):
 
 
 def no_measure_selected(measures):
-    return "None / to be defined" in measures or len(measures) == 0
+    return len(measures) == 0 or (len(measures) == 1 and "None / to be defined" in measures)
 
 
 def is_missing_text(value):
@@ -1908,6 +1911,87 @@ def build_report(inputs, risks, flags, scrutiny_level, outcome, dpia_score, dpia
 
 
 # ---------------------------------------------------------------------
+# AUTOSAVE / SESSION RECOVERY
+# ---------------------------------------------------------------------
+
+AUTOSAVE_DIR = os.path.join(os.path.expanduser("~"), ".digcon_autosave")
+
+
+def save_session_to_disk(assessment_data):
+    """Save assessment data to disk for session recovery."""
+    os.makedirs(AUTOSAVE_DIR, exist_ok=True)
+    path = os.path.join(AUTOSAVE_DIR, "last_session.json")
+    try:
+        payload = {
+            "saved_at": datetime.now().isoformat(),
+            "inputs": assessment_data["inputs"],
+            "risks": assessment_data["risks"],
+            "flags": assessment_data["flags"],
+            "scrutiny_level": assessment_data["scrutiny_level"],
+            "outcome": assessment_data["outcome"],
+            "dpia_score": assessment_data["dpia_score"],
+            "dpia_missing": assessment_data["dpia_missing"],
+            "coherence_warnings": assessment_data["coherence_warnings"],
+            "necessity_judgment": assessment_data["necessity_judgment"],
+            "proportionality_judgment": assessment_data["proportionality_judgment"],
+            "information_gaps": assessment_data["information_gaps"],
+            "stakeholder_escalations": assessment_data["stakeholder_escalations"],
+            "final_decision_log": assessment_data["final_decision_log"],
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except (IOError, TypeError):
+        pass
+
+
+def load_session_from_disk():
+    """Load saved assessment data from disk."""
+    path = os.path.join(AUTOSAVE_DIR, "last_session.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if "flags" in data:
+            data["flags"] = [tuple(f) for f in data["flags"]]
+        return data
+    except (json.JSONDecodeError, IOError):
+        return None
+
+
+# ---------------------------------------------------------------------
+# SESSION RECOVERY SIDEBAR
+# ---------------------------------------------------------------------
+
+with st.sidebar:
+    st.header("Session")
+    _saved_data = load_session_from_disk()
+    if _saved_data and _saved_data.get("saved_at"):
+        try:
+            _ts = datetime.fromisoformat(_saved_data["saved_at"])
+            st.caption(f"Last saved: {_ts.strftime('%Y-%m-%d %H:%M')}")
+        except ValueError:
+            st.caption(f"Last saved: {_saved_data['saved_at']}")
+        if st.button("Restore last session"):
+            restored = dict(_saved_data)
+            restored.pop("saved_at", None)
+            restored["report"] = build_report(
+                restored["inputs"], restored["risks"], restored["flags"],
+                restored["scrutiny_level"], restored["outcome"],
+                restored["dpia_score"], restored["dpia_missing"],
+                restored["coherence_warnings"], restored["final_decision_log"],
+                restored.get("necessity_judgment"),
+                restored.get("proportionality_judgment"),
+                restored.get("information_gaps"),
+                restored.get("stakeholder_escalations"),
+            )
+            st.session_state["last_assessment"] = restored
+            st.rerun()
+    else:
+        st.caption("No saved session found.")
+
+
+# ---------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------
 
@@ -2414,7 +2498,8 @@ with st.form("assessment_form"):
 
         affected_groups_consulted = st.selectbox(
             "Have affected groups or representatives been consulted?",
-            YES_NO_NA_OPTIONS
+            YES_NO_NA_OPTIONS,
+            index=YES_NO_NA_OPTIONS.index("To be verified")
         )
 
     if affected_groups_consulted == "Yes":
@@ -2699,6 +2784,9 @@ with st.form("assessment_form"):
 
 
 if submitted:
+    if "edited_mitigation_plan" in st.session_state:
+        del st.session_state["edited_mitigation_plan"]
+
     inputs = {
         "project_name": project_name,
         "organisation": organisation,
@@ -2847,6 +2935,8 @@ if submitted:
         "final_decision_log": final_decision_log,
         "report": report
     }
+
+    save_session_to_disk(st.session_state["last_assessment"])
 
 
 # ---------------------------------------------------------------------
@@ -3031,12 +3121,12 @@ if "last_assessment" in st.session_state:
 
     st.subheader("Download report")
 
-    safe_file_name = (
-        result["inputs"]["project_name"]
-        .lower()
-        .replace(" ", "_")
-        .replace("/", "_")
-    )
+    safe_file_name = unicodedata.normalize("NFKD", result["inputs"]["project_name"])
+    safe_file_name = safe_file_name.encode("ascii", "ignore").decode("ascii")
+    safe_file_name = re.sub(r"[^\w\s-]", "", safe_file_name).strip().lower()
+    safe_file_name = re.sub(r"[-\s]+", "_", safe_file_name)
+    if not safe_file_name:
+        safe_file_name = "assessment"
 
     operational_register = pd.DataFrame()
     summary_register = pd.DataFrame()
@@ -3066,21 +3156,21 @@ if "last_assessment" in st.session_state:
 
         st.download_button(
             "Download Summary Risk Register CSV",
-            summary_register.to_csv(index=False),
+            "﻿" + summary_register.to_csv(index=False),
             file_name=f"{safe_file_name}_summary_risk_register.csv",
             mime="text/csv"
         )
 
         st.download_button(
             "Download Operational Risk Register CSV",
-            operational_register.to_csv(index=False),
+            "﻿" + operational_register.to_csv(index=False),
             file_name=f"{safe_file_name}_operational_risk_register.csv",
             mime="text/csv"
         )
 
         st.download_button(
             "Download Mitigation Action Plan CSV",
-            mitigation_plan_download.to_csv(index=False),
+            "﻿" + mitigation_plan_download.to_csv(index=False),
             file_name=f"{safe_file_name}_mitigation_action_plan.csv",
             mime="text/csv"
         )
@@ -3104,7 +3194,7 @@ if "last_assessment" in st.session_state:
     if result["information_gaps"]:
         st.download_button(
             "Download Information Gaps CSV",
-            build_information_gaps_df(result["information_gaps"]).to_csv(index=False),
+            "﻿" + build_information_gaps_df(result["information_gaps"]).to_csv(index=False),
             file_name=f"{safe_file_name}_information_gaps.csv",
             mime="text/csv"
         )
@@ -3112,7 +3202,7 @@ if "last_assessment" in st.session_state:
     if result["stakeholder_escalations"]:
         st.download_button(
             "Download Stakeholder Escalations CSV",
-            build_stakeholder_escalations_df(result["stakeholder_escalations"]).to_csv(index=False),
+            "﻿" + build_stakeholder_escalations_df(result["stakeholder_escalations"]).to_csv(index=False),
             file_name=f"{safe_file_name}_stakeholder_escalations.csv",
             mime="text/csv"
         )
