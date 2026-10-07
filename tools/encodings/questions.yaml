@@ -1,0 +1,97 @@
+# Hand-coded structure of the questions in sheets 01 / 02 / 03.
+# Text, IDs, visibility prose and rule references come from the workbook; this file only
+# adds what the workbook leaves in prose. Every non-obvious choice cites an AS-* entry
+# of spec/ANOMALIE_REV2.md.
+
+# 'Modello risposta' (exact workbook text) -> answer kind + offered states.
+# Closed questions offer the states their model names (AS-010).
+response_models:
+  "YES/NO/UNKNOWN/N_A/NOT_OWNED o valori chiusi": {kind: STATE, states: [YES, NO, UNKNOWN, N_A, NOT_OWNED]}
+  "YES / NO / UNKNOWN + legal basis": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES / NO / UNKNOWN + classification basis": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES / NO / UNKNOWN + residual-risk evidence + human acceptability determination": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES/NO/UNKNOWN + testing evidence": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES/NO/UNKNOWN + applicability basis/category": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES/NO/UNKNOWN": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "YES/NO + reference": {kind: STATE, states: [YES, NO, UNKNOWN]}
+  "ENUM: PROVIDER / DEPLOYER / JOINT / UNKNOWN": {kind: ROLE, states: [UNKNOWN]}
+  "RISK RATING: VERY LOW / LOW / MODERATE / HIGH / VERY HIGH / UNKNOWN + evidence status": {kind: RISK_RATING, states: [UNKNOWN]}
+  "NOT REQUIRED / TO DO / DONE + reference": {kind: NOTIFICATION, states: [UNKNOWN]}
+  "MULTI + UNKNOWN / N/A / NOT_OWNED": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "ENUM / MULTI + legal reference + evidence status": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "MULTI + vulnerabilità / protected characteristics": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "MULTI + structured explanation + evidence status": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "TESTO + evidence status": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "TESTO strutturato + evidence status": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "TESTO strutturato + cross-reference a intended purpose": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "TESTO + misure + owner + escalation": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "Misura + owner + trigger + complaint/remedy": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "Durata + frequenza + eventuale pilot scope": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "REFERENCE / document + evidence status": {kind: REFERENCE, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "Cross-reference a DPIA / LED DPIA": {kind: REFERENCE, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "Una o più righe RISK-*": {kind: RISK_ROWS, states: [UNKNOWN, N_A, NOT_OWNED]}
+
+# Re-used conditions (YAML anchors only; the exporter writes them out in full).
+_shared:
+  routing_not_suspended: &routing_not_suspended
+    # FLOW-01: C03 = YES suspends ordinary routing until HS07 is verified (AS-012).
+    any:
+      - not: {q: C03, is: [YES]}
+      - {hs: HS07, is: [NOT_MET]}
+
+# Per-question additions. Questions not listed: kind from response_models, always visible.
+questions:
+  # --- option sets (AS-001 lists, AS-009 question -> list mapping) ---
+  C02: {kind: SINGLE, option_set: GPAI_MODEL_STATUS, assumptions: [AS-001, AS-009]}
+  C06: {option_set: FILER_ROLES, assumptions: [AS-001, AS-009]}
+  Q12: {option_set: CONTEXTS, assumptions: [AS-001, AS-009]}
+  C38: {option_set: ACTIONS, assumptions: [AS-001, AS-009]}
+  C39: {kind: SINGLE, option_set: DECISION_EFFECTS, assumptions: [AS-001, AS-009]}
+  C40: {option_set: GROUPS, assumptions: [AS-001, AS-009]}
+  C47: {option_set: HUMAN_OVERSIGHT_MEASURES, assumptions: [AS-001, AS-009]}
+  C52: {option_set: CONTESTABILITY_MEASURES, assumptions: [AS-001, AS-009]}
+  C18: {option_set: DATA_CATEGORIES, assumptions: [AS-001, AS-009]}
+  C19: {option_set: DATA_SOURCES, assumptions: [AS-001, AS-009]}
+  C42: {option_set: DATA_QUALITY_MEASURES, assumptions: [AS-001, AS-009]}
+  C29: {option_set: DATA_SUBJECT_RIGHTS, assumptions: [AS-001, AS-009]}
+  Q22: {option_set: LEGAL_BASES, assumptions: [AS-001, AS-009]}
+  Q23: {assumptions: [AS-009]}  # MULTI without any option list -> structured text
+
+  # --- visibility (add-on questions also carry their option/state assumptions) ---
+  C56:
+    visibility: {q: C55, is: [YES]}
+  C63:
+    visibility: {q: C55, is: [YES]}
+    option_set: STAKEHOLDER_ESCALATION_TRIGGERS
+    assumptions: [AS-001, AS-009]
+  D00:
+    visibility:
+      all:
+        - {q: FOLLOW, is: [YES]}
+        - {q: C05, is: [DEPLOYER, JOINT]}
+        - *routing_not_suspended
+    assumptions: [AS-002, AS-012]
+  P01: &provider_visible
+    visibility: {rule: FLOW-03, fired: true}
+    assumptions: [AS-011]
+  P02: {<<: *provider_visible, assumptions: [AS-011, AS-014]}
+  P03: {<<: *provider_visible, assumptions: [AS-011, AS-014]}
+  P04: {<<: *provider_visible, assumptions: [AS-011, AS-014]}
+  P05: {<<: *provider_visible, assumptions: [AS-011, AS-014]}
+  P06: *provider_visible
+  P07: *provider_visible
+  P08: *provider_visible
+  P09: *provider_visible
+  P10: *provider_visible
+  D01: &deployer_visible
+    visibility: {rule: FLOW-05, fired: true}
+    assumptions: [AS-002]
+  D02: *deployer_visible
+  D03: {<<: *deployer_visible, option_set: GROUPS, assumptions: [AS-001, AS-002, AS-009]}
+  D04: *deployer_visible
+  D05: *deployer_visible
+  D06: *deployer_visible
+  D07: {<<: *deployer_visible, assumptions: [AS-002, AS-010]}
+  D08: *deployer_visible
+  D09: *deployer_visible
+  D10: {<<: *deployer_visible, assumptions: [AS-002, AS-010]}

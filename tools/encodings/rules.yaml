@@ -1,0 +1,1070 @@
+# Hand-coded structure of the 73 rules of 05_REGOLE_HS.
+#
+# The workbook gives triggers in prose; this file turns each one into conditions over
+# answers, rule elements, other rules and engine flags (see digcon.domain.models.Condition).
+# Everything else about a rule (severity, human gate, remediability, texts) is read from
+# the workbook by tools/export_workbook.py and must not be repeated here.
+#
+# Conventions
+# - cases are tried in order, the first match wins; the rule "fires" when one matches.
+# - gap carries the 'Missing/unknown treatment' column.
+# - MANUAL elements are the slot a person fills now and the API later. Outside HS-*,
+#   elements are phrased as the deficiency: MET = the deficiency is present (AS-028).
+# - HS-* elements: text, order and count come from the workbook ("... AND ..."); this
+#   file only adds source / binding / flags, in the same order.
+# - Every choice the workbook does not make cites an AS-* of spec/ANOMALIE_REV2.md.
+
+_shared:
+  routing_not_suspended: &routing_not_suspended
+    any:
+      - not: {q: C03, is: [YES]}
+      - {hs: HS07, is: [NOT_MET]}
+
+rules:
+  # ------------------------------------------------------------------ FLOW
+  FLOW-01:
+    kind: STRUCTURED
+    inputs: [C03]
+    cases:
+      - when: {q: C03, is: [YES]}
+        effects: [SUSPEND_ROUTING, ROUTE_TO_HS]
+    routes_to: [HS07]
+    gap: {q: C03, unresolved: true}
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-012]
+
+  FLOW-02:
+    kind: STRUCTURED
+    inputs: [FOLLOW]
+    cases:
+      - when: {q: FOLLOW, is: [NO]}
+        effects: [CLOSE_MODULE]
+    gap: {q: FOLLOW, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  FLOW-03:
+    kind: STRUCTURED
+    inputs: [FOLLOW, C05]
+    cases:
+      - when:
+          all:
+            - {q: FOLLOW, is: [YES]}
+            - {q: C05, is: [PROVIDER, JOINT]}
+            - *routing_not_suspended
+        effects: [ACTIVATE_MODULE]
+    assumptions: [AS-011, AS-012]
+
+  FLOW-04:
+    kind: STRUCTURED
+    inputs: [C55, C56, C63]
+    cases:
+      - when: {q: C55, is: [YES]}
+        effects: [RECORD]
+    gap: {q: C55, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    note: "C55 = NO / UNKNOWN does not close SEP: SEP-02 opens the SEP assessment."
+
+  FLOW-05:
+    kind: STRUCTURED
+    inputs: [FOLLOW, C05, D00]
+    cases:
+      - when:
+          all:
+            - {q: FOLLOW, is: [YES]}
+            - {q: C05, is: [DEPLOYER, JOINT]}
+            - {q: D00, is: [YES]}
+            - *routing_not_suspended
+        effects: [ACTIVATE_MODULE]
+    gap: {q: D00, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-002, AS-012]
+
+  # ------------------------------------------------------------------ evidence / quality
+  EG-01:
+    kind: DERIVED
+    cases:
+      - when: {flag: VISIBLE_QUESTION_UNRESOLVED}
+        effects: [EVIDENCE_GAP]
+    assumptions: [AS-004, AS-013]
+
+  QUAL-01:
+    kind: MANUAL
+    inputs: [C12, C16, C17, C22, C23, C32]
+    elements:
+      - {id: QUAL-01.E1, source: MANUAL, text: "C12 (operational and organisational context) is non-empty but substantially insufficient"}
+      - {id: QUAL-01.E2, source: MANUAL, text: "C16 (legal basis reasoning) is non-empty but substantially insufficient"}
+      - {id: QUAL-01.E3, source: MANUAL, text: "C17 (purpose limitation / compatibility reasoning) is non-empty but substantially insufficient"}
+      - {id: QUAL-01.E4, source: MANUAL, text: "C22 (data minimisation reasoning) is non-empty but substantially insufficient"}
+      - {id: QUAL-01.E5, source: MANUAL, text: "C23 (retention reasoning) is non-empty but substantially insufficient"}
+      - {id: QUAL-01.E6, source: MANUAL, text: "C32 (necessity reasoning) is non-empty but substantially insufficient"}
+    cases:
+      - when:
+          any:
+            - {element: QUAL-01.E1, is: [MET]}
+            - {element: QUAL-01.E2, is: [MET]}
+            - {element: QUAL-01.E3, is: [MET]}
+            - {element: QUAL-01.E4, is: [MET]}
+            - {element: QUAL-01.E5, is: [MET]}
+            - {element: QUAL-01.E6, is: [MET]}
+        effects: [REMEDIATION_REQUIRED]
+    gap:
+      any:
+        - all: [{q: C12, provided: true}, {element: QUAL-01.E1, unresolved: true}]
+        - all: [{q: C16, provided: true}, {element: QUAL-01.E2, unresolved: true}]
+        - all: [{q: C17, provided: true}, {element: QUAL-01.E3, unresolved: true}]
+        - all: [{q: C22, provided: true}, {element: QUAL-01.E4, unresolved: true}]
+        - all: [{q: C23, provided: true}, {element: QUAL-01.E5, unresolved: true}]
+        - all: [{q: C32, provided: true}, {element: QUAL-01.E6, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-015, AS-028]
+
+  # ------------------------------------------------------------------ scrutiny
+  SCR-01:
+    kind: STRUCTURED
+    inputs: [C46]
+    cases:
+      - when: {q: C46, is: [NO]}
+        effects: [SCRUTINY, REMEDIATION_REQUIRED]
+    gap: {q: C46, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-016]
+
+  SCR-02:
+    kind: DERIVED
+    cases:
+      - when: {prop: ANY, is: [NOT_DEMONSTRATED, REMEDIATION_REQUIRED, HUMAN_LEGAL_REVIEW, EVIDENCE_GAP]}
+        effects: [SCRUTINY]
+    note: "Marks the proportionality justification as incomplete; never decides proportionate/disproportionate."
+
+  SCR-03:
+    kind: DERIVED
+    inputs: [C34, C35]
+    cases:
+      - when:
+          any:
+            - {risk: ANY, residual_at_least: HIGH}
+            - {q: C35, is: [YES]}
+        effects: [SCRUTINY, HUMAN_LEGAL_REVIEW]
+    gap: {risk: ANY, initial_at_least: HIGH, residual_missing: true}
+    gap_effects: [VERIFICATION_REQUEST]
+    assumptions: [AS-019]
+
+  # ------------------------------------------------------------------ cross-checks
+  CROSS-01:
+    kind: STRUCTURED
+    inputs: [N01]
+    cases:
+      - when: {q: N01, provided: true}
+        effects: [RECORD]
+    gap: {q: N01, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  CROSS-02:
+    kind: STRUCTURED
+    inputs: [N02]
+    cases:
+      - when: {q: N02, is: [NO]}
+        effects: [SCRUTINY, RISK_INPUT]
+    gap: {q: N02, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    note: "Possible reasonably foreseeable misuse: feeds P05/P06 and opens HS04 screening."
+
+  # ------------------------------------------------------------------ system
+  SYS-01: {kind: SYSTEM, note: "Enforced by construction: unresolved / missing / high risk never yield O5."}
+  SYS-02: {kind: SYSTEM, note: "Enforced by OUT-05 + validator: O5 only from HS01–HS09."}
+  SYS-03: {kind: SYSTEM, note: "Recommended outcome is never written into G01–G05."}
+
+  # ------------------------------------------------------------------ FRIA Art. 27
+  FRIA-27A:
+    kind: MANUAL
+    inputs: [D01, N01]
+    elements:
+      - {id: FRIA-27A.E1, source: MANUAL, text: "The deployer's process of use (D01) is not coherent with the intended purpose (N01)"}
+    cases:
+      - when: {element: FRIA-27A.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED]
+    gap:
+      any:
+        - {q: D01, unresolved: true}
+        - all: [{q: D01, provided: true}, {element: FRIA-27A.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  FRIA-27B:
+    kind: STRUCTURED
+    inputs: [D02]
+    cases:
+      - when: {q: D02, provided: true}
+        effects: [RISK_INPUT]
+    gap: {q: D02, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  FRIA-27C:
+    kind: STRUCTURED
+    inputs: [D03]
+    cases:
+      - when: {q: D03, provided: true}
+        effects: [RISK_INPUT, SEP_ASSESSMENT]
+    gap: {q: D03, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  FRIA-27D:
+    kind: MANUAL
+    inputs: [D04]
+    elements:
+      - {id: FRIA-27D.E1, source: MANUAL, text: "The specific risks in D04 were assessed without the provider information under Article 13"}
+    cases:
+      - when: {q: D04, provided: true}
+        effects: [RISK_INPUT]
+    gap:
+      any:
+        - {q: D04, unresolved: true}
+        - {element: FRIA-27D.E1, is: [MET]}
+        - all: [{q: D04, provided: true}, {element: FRIA-27D.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+    note: "Severity 'By RISK-*' (B6): the rule has no severity of its own, each RISK-* is calibrated."
+
+  FRIA-27E:
+    kind: MANUAL
+    inputs: [D05, C46, C47, C48]
+    elements:
+      - {id: FRIA-27E.E1, source: MANUAL, text: "Human-oversight implementation (D05, C46–C48) is insufficient against the instructions for use"}
+    cases:
+      - when: {element: FRIA-27E.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, SCRUTINY]
+    gap:
+      any:
+        - {q: D05, unresolved: true}
+        - all: [{q: D05, provided: true}, {element: FRIA-27E.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  FRIA-27F:
+    kind: MANUAL
+    inputs: [D06]
+    elements:
+      - {id: FRIA-27F.E1, source: MANUAL, text: "Measures, internal governance or complaint mechanisms for materialised risks (D06) are absent or inadequate"}
+    cases:
+      - when: {element: FRIA-27F.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, MITIGATION_REQUIRED]
+    gap:
+      any:
+        - {q: D06, unresolved: true}
+        - all: [{q: D06, provided: true}, {element: FRIA-27F.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  # ------------------------------------------------------------------ hard stops
+  # A HS is "opened" by its screening condition or by a person recording any element as
+  # MET / UNCERTAIN. Opened + still UNCERTAIN = material evidence gap. Not opened = not
+  # evaluated, no effect (AS-017). Resolved MET needs all elements MET + gate COMPLETED.
+  HS01:
+    kind: MANUAL
+    inputs: [C10, W01, N01]
+    elements:
+      - {id: HS01.E1, source: MANUAL, legal_judgement: true}
+      - {id: HS01.E2, source: MANUAL, legal_judgement: true}
+      - {id: HS01.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {element: HS01.E1, is: [MET, UNCERTAIN]}
+            - {element: HS01.E2, is: [MET, UNCERTAIN]}
+            - {element: HS01.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS01, fired: true}, {hs: HS01, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+
+  HS02:
+    kind: MANUAL
+    inputs: [Q22, C14, C16]
+    elements:
+      - id: HS02.E1
+        source: ANSWER
+        binding: {q: C14, met_when: [NO], not_met_when: [YES]}
+      - {id: HS02.E2, source: MANUAL, legal_judgement: true}
+      - {id: HS02.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {q: C14, is: [NO]}
+            - {element: HS02.E2, is: [MET, UNCERTAIN]}
+            - {element: HS02.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS02, fired: true}, {hs: HS02, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+
+  HS03:
+    kind: MANUAL
+    inputs: [C15, C17]
+    elements:
+      - {id: HS03.E1, source: MANUAL}
+      - {id: HS03.E2, source: MANUAL, legal_judgement: true}
+      - {id: HS03.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {q: C15, is: [NO]}
+            - {element: HS03.E1, is: [MET, UNCERTAIN]}
+            - {element: HS03.E2, is: [MET, UNCERTAIN]}
+            - {element: HS03.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS03, fired: true}, {hs: HS03, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+    note: "C15 = NO means compatibility not assessed, not incompatibility: it only opens the screening."
+
+  HS04:
+    kind: MANUAL
+    inputs: [N01, N02, D01]
+    elements:
+      - id: HS04.E1
+        source: ANSWER
+        binding: {q: N02, met_when: [NO], not_met_when: [YES]}
+      - {id: HS04.E2, source: MANUAL, legal_judgement: true}
+      - {id: HS04.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {q: N02, is: [NO]}
+            - {element: HS04.E2, is: [MET, UNCERTAIN]}
+            - {element: HS04.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS04, fired: true}, {hs: HS04, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+
+  HS05:
+    kind: MANUAL
+    inputs: [C46, C47, C48, D05]
+    elements:
+      - {id: HS05.E1, source: MANUAL, legal_judgement: true}
+      - {id: HS05.E2, source: MANUAL}
+      - {id: HS05.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {q: C46, is: [NO]}
+            - {element: HS05.E1, is: [MET, UNCERTAIN]}
+            - {element: HS05.E2, is: [MET, UNCERTAIN]}
+            - {element: HS05.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS05, fired: true}, {hs: HS05, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+
+  HS06:
+    kind: MANUAL
+    inputs: [C50, C51, C52, C53]
+    elements:
+      - {id: HS06.E1, source: MANUAL, legal_judgement: true}
+      - {id: HS06.E2, source: MANUAL}
+      - {id: HS06.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {rule: REM-01, fired: true}
+            - {element: HS06.E1, is: [MET, UNCERTAIN]}
+            - {element: HS06.E2, is: [MET, UNCERTAIN]}
+            - {element: HS06.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS06, fired: true}, {hs: HS06, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+
+  HS07:
+    kind: MANUAL
+    inputs: [C03]
+    elements:
+      - {id: HS07.E1, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {q: C03, is: [YES]}
+            - {element: HS07.E1, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS07, fired: true}, {hs: HS07, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017]
+    note: "The closed list of prohibited uses is not in the workbook: E1 is a legal-gate determination."
+
+  HS08:
+    kind: MANUAL
+    inputs: [C34, C35, P03, D04, D06]
+    elements:
+      - {id: HS08.E1, source: MANUAL, legal_judgement: true}
+      - {id: HS08.E2, source: MANUAL, requires_verified_mitigation: true}
+      - {id: HS08.E3, source: MANUAL, legal_judgement: true, non_remediability: true}
+    cases:
+      - when:
+          any:
+            - {prop: PROP-09, is: [HUMAN_LEGAL_REVIEW]}
+            - {element: HS08.E1, is: [MET, UNCERTAIN]}
+            - {element: HS08.E2, is: [MET, UNCERTAIN]}
+            - {element: HS08.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS08, fired: true}, {hs: HS08, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017, AS-018]
+
+  HS09:
+    kind: MANUAL
+    inputs: [C40, D03, C44]
+    elements:
+      - {id: HS09.E1, source: MANUAL}
+      - {id: HS09.E2, source: MANUAL, legal_judgement: true}
+      - {id: HS09.E3, source: MANUAL, legal_judgement: true, non_remediability: true, requires_verified_mitigation: true}
+    cases:
+      - when:
+          any:
+            - {prop: PROP-10, is: [HUMAN_LEGAL_REVIEW]}
+            - {element: HS09.E1, is: [MET, UNCERTAIN]}
+            - {element: HS09.E2, is: [MET, UNCERTAIN]}
+            - {element: HS09.E3, is: [MET, UNCERTAIN]}
+        effects: [ROUTE_TO_HS, HUMAN_LEGAL_REVIEW]
+    gap:
+      all: [{rule: HS09, fired: true}, {hs: HS09, is: [UNCERTAIN]}]
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-005, AS-006, AS-017, AS-018]
+
+  # ------------------------------------------------------------------ provider Art. 9
+  RMS-9A:
+    kind: STRUCTURED
+    inputs: [P01]
+    cases:
+      - when: {q: P01, is: [NO]}
+        effects: [REMEDIATION_REQUIRED]
+    gap: {q: P01, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  RMS-9B:
+    kind: STRUCTURED
+    inputs: [P02]
+    cases:
+      - when: {q: P02, is: [YES]}
+        effects: [RISK_INPUT, SCRUTINY]
+    gap: {q: P02, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-014]
+
+  RMS-9C:
+    kind: STRUCTURED
+    inputs: [P03]
+    cases:
+      - when: {q: P03, is: [YES]}
+        effects: [RISK_INPUT, SCRUTINY, SEP_ASSESSMENT]
+    gap: {q: P03, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-014]
+
+  RMS-9D:
+    kind: STRUCTURED
+    inputs: [P04, N01]
+    cases:
+      - when: {q: P04, is: [YES]}
+        effects: [RISK_INPUT, SCRUTINY]
+    gap: {q: P04, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-014]
+
+  RMS-9E:
+    kind: STRUCTURED
+    inputs: [P05, N02]
+    cases:
+      - when: {q: P05, is: [YES]}
+        effects: [RISK_INPUT]
+      - when:
+          all: [{q: N02, is: [NO]}, {q: P05, is: [NO]}]
+        effects: [VERIFICATION_REQUEST]
+    gap: {q: P05, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-014, AS-020]
+
+  RMS-9F:
+    kind: STRUCTURED
+    inputs: [P06]
+    cases:
+      - when: {q: P06, is: [NO]}
+        effects: [REMEDIATION_REQUIRED]
+    gap: {q: P06, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  RMS-9G:
+    kind: STRUCTURED
+    inputs: [P07]
+    cases:
+      - when: {q: P07, is: [NO]}
+        effects: [REMEDIATION_REQUIRED]
+    gap: {q: P07, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  RMS-9H:
+    kind: STRUCTURED
+    inputs: [P08, P02, P03, P04]
+    cases:
+      - when:
+          all:
+            - {q: P08, is: [NO]}
+            - any: [{q: P02, is: [YES]}, {q: P03, is: [YES]}, {q: P04, is: [YES]}]
+        effects: [REMEDIATION_REQUIRED, MITIGATION_REQUIRED]
+    gap:
+      any:
+        - {q: P08, unresolved: true}
+        - all:
+            - {q: P08, is: [NO]}
+            - any: [{q: P02, unresolved: true}, {q: P03, unresolved: true}, {q: P04, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-020]
+
+  RMS-9I:
+    kind: STRUCTURED
+    inputs: [P09]
+    cases:
+      - when: {q: P09, is: [NO]}
+        effects: [REMEDIATION_REQUIRED]
+      - when: {q: P09, is: [YES]}
+        effects: [HUMAN_LEGAL_REVIEW]
+    gap: {q: P09, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    note: "Residual-risk acceptability is a human determination: YES closes only with the gate COMPLETED."
+
+  RMS-9J:
+    kind: STRUCTURED
+    inputs: [P10]
+    cases:
+      - when: {q: P10, is: [NO]}
+        effects: [REMEDIATION_REQUIRED]
+    gap: {q: P10, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  # ------------------------------------------------------------------ SEP
+  SEP-01:
+    kind: STRUCTURED
+    inputs: [C40, D03]
+    cases:
+      - when:
+          any: [{q: C40, provided: true}, {q: D03, provided: true}]
+        effects: [SEP_ASSESSMENT]
+    gap: {q: C40, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-021]
+
+  SEP-02:
+    kind: STRUCTURED
+    inputs: [C55]
+    cases:
+      - when:
+          any: [{q: C55, is: [NO]}, {q: C55, unresolved: true}]
+        effects: [SEP_ASSESSMENT]
+
+  SEP-03:
+    kind: STRUCTURED
+    cases:
+      - when: {sep: SEP09, is: [MODIFY, CONTRADICT, NEW_ISSUE]}
+        effects: [RISK_INPUT]
+      - when: {sep: SEP09, is: [CONFIRM]}
+        effects: [RECORD]
+    note: "Risk variables change only with explicit provenance; consultation never lowers risk by itself."
+
+  SEP-04:
+    kind: STRUCTURED
+    cases:
+      - when: {sep: SEP11, is: [YES]}
+        effects: [MITIGATION_REQUIRED]
+
+  # ------------------------------------------------------------------ mitigation
+  MIT-01:
+    kind: DERIVED
+    cases:
+      - when: {flag: REMEDIATION_TRIGGERED}
+        effects: [MITIGATION_REQUIRED]
+
+  MIT-02:
+    kind: DERIVED
+    cases:
+      - when:
+          mitigation: ANY_ACTIVATED
+          decision_effect: [REQUIRED_BEFORE_DEPLOYMENT, HUMAN_DECISION_BEFORE_ACTIVATION, NONE_UNTIL_EVIDENCE_GAP_RESOLVED]
+          status_not_in: [VERIFIED_EFFECTIVE, NOT_APPLICABLE]
+        effects: [REMEDIATION_REQUIRED]
+    assumptions: [AS-022]
+
+  MIT-03:
+    kind: DERIVED
+    cases:
+      - when:
+          mitigation: ANY_ACTIVATED
+          status_in: [IMPLEMENTED_UNVERIFIED]
+          without_evidence: true
+        effects: [EVIDENCE_GAP]
+    assumptions: [AS-013]
+
+  MIT-04: {kind: SYSTEM, note: "Enforced by HS evaluation: elements flagged requires_verified_mitigation, no override of a met non-remediable HS."}
+
+  # ------------------------------------------------------------------ outcome (precedence O5 → O1)
+  OUT-05:
+    kind: DERIVED
+    cases:
+      - when: {flag: HS_MET}
+        effects: [OUTCOME]
+    outcome: O5
+    assumptions: [AS-006]
+
+  OUT-04:
+    kind: DERIVED
+    cases:
+      - when: {flag: MATERIAL_EVIDENCE_GAP}
+        effects: [OUTCOME]
+    outcome: O4
+    assumptions: [AS-013, AS-027]
+
+  OUT-03:
+    kind: DERIVED
+    cases:
+      - when: {flag: OPEN_REQUIRED_REMEDIATION}
+        effects: [OUTCOME]
+    outcome: O3
+    assumptions: [AS-016, AS-022]
+
+  OUT-02:
+    kind: DERIVED
+    cases:
+      - when: {flag: OPEN_CONDITION}
+        effects: [OUTCOME]
+    outcome: O2
+    assumptions: [AS-023]
+
+  OUT-01:
+    kind: DERIVED
+    cases:
+      - when:
+          not:
+            any:
+              - {flag: HS_MET}
+              - {flag: MATERIAL_EVIDENCE_GAP}
+              - {flag: OPEN_REQUIRED_REMEDIATION}
+              - {flag: OPEN_CONDITION}
+        effects: [OUTCOME]
+    outcome: O1
+
+  # ------------------------------------------------------------------ routing / scoping
+  ROLE-01:
+    kind: STRUCTURED
+    inputs: [C05, FOLLOW]
+    cases:
+      - when: {q: C05, is: [PROVIDER, DEPLOYER, JOINT]}
+        effects: [RECORD]
+    routes_to: [FLOW-03, FLOW-05]
+    gap: {q: C05, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  SCOPE-01:
+    kind: STRUCTURED
+    inputs: [C02, W01, Q12, C10, C11, C38, C39]
+    cases:
+      - when:
+          all:
+            - {q: W01, provided: true}
+            - {q: Q12, provided: true}
+            - {q: C10, provided: true}
+            - {q: C11, provided: true}
+            - {q: C38, provided: true}
+            - {q: C39, provided: true}
+        effects: [RECORD]
+    gap:
+      any:
+        - {q: C02, unresolved: true}
+        - {q: W01, unresolved: true}
+        - {q: Q12, unresolved: true}
+        - {q: C10, unresolved: true}
+        - {q: C11, unresolved: true}
+        - {q: C38, unresolved: true}
+        - {q: C39, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+
+  # ------------------------------------------------------------------ substantive checks
+  LEGAL-01:
+    kind: MANUAL
+    inputs: [Q22, Q23, C14, C16, C17]
+    elements:
+      - {id: LEGAL-01.E1, source: MANUAL, legal_judgement: true, text: "The legal-basis or purpose-limitation reasoning (C16, C17) is inadequate or inconsistent with Q22 / Q23"}
+    cases:
+      - when:
+          any: [{q: C14, is: [NO]}, {element: LEGAL-01.E1, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED, SCRUTINY]
+    gap:
+      any:
+        - {q: Q22, unresolved: true}
+        - {q: C14, unresolved: true}
+        - {q: C16, unresolved: true}
+        - {q: C17, unresolved: true}
+        - all:
+            - any: [{q: C16, provided: true}, {q: C17, provided: true}]
+            - {element: LEGAL-01.E1, unresolved: true}
+    gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    assumptions: [AS-013, AS-028]
+    note: "C14 = NO does not open HS02 by itself as an O5: HS02 needs all its elements."
+
+  DATA-01:
+    kind: MANUAL
+    inputs: [C15, C18, C19, C20, C21, C22, C23, Q16]
+    elements:
+      - {id: DATA-01.E1, source: MANUAL, text: "Control over data categories or sources (C18, C19) is inadequate for the purpose"}
+    cases:
+      - when:
+          any:
+            - {q: C15, is: [NO]}
+            - {q: C20, is: [NO]}
+            - {q: C21, is: [NO]}
+            - {q: Q16, is: [NO]}
+            - {element: DATA-01.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, RISK_INPUT]
+    gap:
+      any:
+        - {q: C15, unresolved: true}
+        - {q: C18, unresolved: true}
+        - {q: C19, unresolved: true}
+        - {q: C20, unresolved: true}
+        - {q: C21, unresolved: true}
+        - {q: Q16, unresolved: true}
+        - all:
+            - any: [{q: C18, provided: true}, {q: C19, provided: true}]
+            - {element: DATA-01.E1, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  DQ-01:
+    kind: MANUAL
+    inputs: [C41, C42, C43]
+    elements:
+      - {id: DQ-01.E1, source: MANUAL, text: "The data-quality measures in place (C42) are inadequate"}
+    cases:
+      - when:
+          any:
+            - {q: C41, is: [NO]}
+            - {q: C43, is: [HIGH, VERY_HIGH]}
+            - {element: DQ-01.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, RISK_INPUT]
+    gap:
+      any:
+        - {q: C41, unresolved: true}
+        - {q: C42, unresolved: true}
+        - {q: C43, unresolved: true}
+        - all: [{q: C42, provided: true}, {element: DQ-01.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+    note: "C43 is a declared rating: HIGH/VERY HIGH raises action; a lower rating never reduces risk without verification."
+
+  BIAS-01:
+    kind: MANUAL
+    inputs: [C44]
+    elements:
+      - {id: BIAS-01.E1, source: MANUAL, text: "Disproportionate impact (disparity) on protected groups has been detected"}
+    cases:
+      - when:
+          any: [{q: C44, is: [NO]}, {element: BIAS-01.E1, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED, SCRUTINY, RISK_INPUT]
+    gap:
+      any:
+        - {q: C44, unresolved: true}
+        - all: [{q: C44, provided: true}, {element: BIAS-01.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  TRANS-01:
+    kind: MANUAL
+    inputs: [C28, C29]
+    elements:
+      - {id: TRANS-01.E1, source: MANUAL, text: "Operational support for data-subject rights (C29) is inadequate"}
+    cases:
+      - when:
+          any: [{q: C28, is: [NO]}, {element: TRANS-01.E1, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED]
+    gap:
+      any:
+        - {q: C28, unresolved: true}
+        - {q: C29, unresolved: true}
+        - all: [{q: C29, provided: true}, {element: TRANS-01.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  REM-01:
+    kind: MANUAL
+    inputs: [C50, C51, C52, C53]
+    elements:
+      - {id: REM-01.E1, source: MANUAL, text: "The contestability measures in place (C52) are inadequate"}
+    cases:
+      - when:
+          any:
+            - {q: C50, is: [NO]}
+            - {q: C51, is: [NO]}
+            - {q: C53, is: [NO]}
+            - {element: REM-01.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, SCRUTINY]
+    gap:
+      any:
+        - {q: C50, unresolved: true}
+        - {q: C51, unresolved: true}
+        - {q: C52, unresolved: true}
+        - {q: C53, unresolved: true}
+        - all: [{q: C52, provided: true}, {element: REM-01.E1, unresolved: true}]
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-013, AS-028]
+
+  # ------------------------------------------------------------------ proportionality
+  PROP-00: {kind: SYSTEM, note: "Never outputs proportionate/disproportionate; dispatches to PROP-01..PROP-10."}
+
+  PROP-01:
+    kind: STRUCTURED
+    inputs: [C10, C11, C40, C31, C47, C34, C35]
+    cases:
+      - when:
+          any:
+            - {q: C10, unresolved: true}
+            - {q: C11, unresolved: true}
+            - {q: C40, unresolved: true}
+            - not: {q: C31, is: [YES]}
+            - {q: C47, unresolved: true}
+            - {q: C34, unresolved: true}
+            - {q: C35, unresolved: true}
+            - not: {risk: ANY, initial_at_least: VERY_LOW}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all:
+            - {q: C10, provided: true}
+            - {q: C11, provided: true}
+            - {q: C40, provided: true}
+            - {q: C47, provided: true}
+            - {q: C34, provided: true}
+            - {q: C35, provided: true}
+        status: SUPPORTED
+    assumptions: [AS-013, AS-024]
+
+  PROP-02:
+    kind: MANUAL
+    inputs: [W01, N01, N02, C10, C38, C39]
+    elements:
+      - {id: PROP-02.E1, source: MANUAL, legal_judgement: true, text: "The rational connection between the concrete use and the declared purpose is not sufficiently demonstrated"}
+    cases:
+      - when:
+          any: [{q: N02, is: [NO]}, {element: PROP-02.E1, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED, SCRUTINY]
+        status: NOT_DEMONSTRATED
+      - when:
+          any: [{q: N02, unresolved: true}, {element: PROP-02.E1, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all: [{q: N02, is: [YES]}, {element: PROP-02.E1, is: [NOT_MET]}]
+        status: SUPPORTED
+    assumptions: [AS-013, AS-028]
+
+  PROP-03:
+    kind: MANUAL
+    inputs: [C31, C32]
+    elements:
+      - {id: PROP-03.E1, source: MANUAL, legal_judgement: true, text: "A reasonably practicable less intrusive alternative capable of achieving the purpose exists and was excluded without sufficient justification"}
+    cases:
+      - when:
+          any: [{q: C31, is: [NO]}, {q: C31, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when: {element: PROP-03.E1, is: [MET]}
+        effects: [REMEDIATION_REQUIRED, HUMAN_LEGAL_REVIEW]
+        status: NOT_DEMONSTRATED
+      - when: {element: PROP-03.E1, unresolved: true}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when: {element: PROP-03.E1, is: [NOT_MET]}
+        status: SUPPORTED
+    assumptions: [AS-013, AS-028]
+    note: "PROP-T04 expects NOT DEMONSTRATED with action REMEDIATION REQUIRED (+ possible HUMAN LEGAL REVIEW): status and action are kept apart (ANOMALIE C2)."
+
+  PROP-04:
+    kind: MANUAL
+    inputs: [C20, C22, Q16]
+    elements:
+      - {id: PROP-04.E1, source: MANUAL, text: "Data categories, frequency, population, duration, access or operational scope exceed what is necessary for the stated purpose"}
+    cases:
+      - when:
+          any: [{q: C20, is: [NO]}, {q: Q16, is: [NO]}, {element: PROP-04.E1, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED]
+        status: REMEDIATION_REQUIRED
+      - when:
+          any: [{q: C20, unresolved: true}, {q: Q16, unresolved: true}, {element: PROP-04.E1, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all: [{q: C20, is: [YES]}, {q: Q16, is: [YES]}, {element: PROP-04.E1, is: [NOT_MET]}]
+        status: SUPPORTED
+    assumptions: [AS-013, AS-028]
+
+  PROP-05:
+    kind: MANUAL
+    inputs: [C32, C33]
+    elements:
+      - {id: PROP-05.E1, source: MANUAL, text: "The necessity reasoning (C32) is merely assertive, without reconstructing interference/harm, purpose, alternatives, safeguards and residual impact"}
+      - {id: PROP-05.E2, source: MANUAL, text: "The proportionality reasoning (C33) is merely assertive, without reconstructing interference/harm, purpose, alternatives, safeguards and residual impact"}
+    cases:
+      - when:
+          any: [{q: C32, unresolved: true}, {q: C33, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          any: [{element: PROP-05.E1, is: [MET]}, {element: PROP-05.E2, is: [MET]}]
+        effects: [REMEDIATION_REQUIRED]
+        status: NOT_DEMONSTRATED
+      - when:
+          any: [{element: PROP-05.E1, unresolved: true}, {element: PROP-05.E2, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all: [{element: PROP-05.E1, is: [NOT_MET]}, {element: PROP-05.E2, is: [NOT_MET]}]
+        status: SUPPORTED
+    assumptions: [AS-013, AS-028]
+
+  PROP-06:
+    kind: MANUAL
+    inputs: [C42, C43, C44, C46, C47, C48, C50, C51, C52, C53, D05, D06]
+    elements:
+      - {id: PROP-06.E1, source: MANUAL, text: "The operational effectiveness of the declared safeguards relied on to reduce risk is not documented"}
+      - {id: PROP-06.E2, source: MANUAL, text: "A declared safeguard is not operational, not relevant to the harm, not specific, not verifiable or not capable of reducing likelihood or severity"}
+    cases:
+      - when:
+          all:
+            - &safeguard_relied_on
+              any:
+                - {q: C42, provided: true}
+                - {q: C47, provided: true}
+                - {q: C52, provided: true}
+                - {q: D05, provided: true}
+                - {q: D06, provided: true}
+            - {element: PROP-06.E2, is: [MET]}
+        effects: [REMEDIATION_REQUIRED]
+        status: REMEDIATION_REQUIRED
+      - when:
+          all:
+            - *safeguard_relied_on
+            - any:
+                - {element: PROP-06.E1, is: [MET]}
+                - {element: PROP-06.E1, unresolved: true}
+                - {element: PROP-06.E2, unresolved: true}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all:
+            - *safeguard_relied_on
+            - {element: PROP-06.E1, is: [NOT_MET]}
+            - {element: PROP-06.E2, is: [NOT_MET]}
+        status: SUPPORTED
+    assumptions: [AS-013, AS-028]
+    note: "A declared safeguard never reduces residual risk until verified (PROP-T06)."
+
+  PROP-07:
+    kind: MANUAL
+    inputs: [C34, C35]
+    elements:
+      - {id: PROP-07.E1, source: MANUAL, legal_judgement: true, text: "A material fundamental-rights interference remains after verified safeguards/mitigations"}
+    cases:
+      - when:
+          any: [{risk: ANY, residual_at_least: HIGH}, {element: PROP-07.E1, is: [MET]}]
+        effects: [HUMAN_LEGAL_REVIEW, SCRUTINY, MITIGATION_REQUIRED]
+        status: HUMAN_LEGAL_REVIEW
+      - when: {risk: ANY, initial_at_least: HIGH, residual_missing: true}
+        effects: [VERIFICATION_REQUEST]
+        status: EVIDENCE_GAP
+    assumptions: [AS-019, AS-028]
+    note: "HIGH residual risk is never 'disproportionate' and never O5 (PROP-T07)."
+
+  PROP-08:
+    kind: DERIVED
+    cases:
+      - when:
+          any:
+            - {prop: PROP-03, is: [NOT_DEMONSTRATED, REMEDIATION_REQUIRED, HUMAN_LEGAL_REVIEW]}
+            - {prop: PROP-04, is: [REMEDIATION_REQUIRED]}
+            - {prop: PROP-06, is: [REMEDIATION_REQUIRED]}
+            - {prop: PROP-07, is: [HUMAN_LEGAL_REVIEW]}
+        effects: [MITIGATION_REQUIRED]
+    note: "issue → mitigation plan → implementation/evidence → reassessment → new residual risk."
+
+  PROP-09:
+    kind: MANUAL
+    inputs: [C34, C35]
+    elements:
+      - {id: PROP-09.E1, source: MANUAL, legal_judgement: true, text: "Grave interference/harm is sufficiently established"}
+      - {id: PROP-09.E2, source: MANUAL, text: "Relevant safeguards have been considered"}
+      - {id: PROP-09.E3, source: MANUAL, text: "Relevant mitigations have been considered"}
+      - {id: PROP-09.E4, source: MANUAL, text: "Residual impact remains high"}
+      - {id: PROP-09.E5, source: MANUAL, legal_judgement: true, text: "Further reasonable mitigation cannot reduce it to an acceptable level"}
+    cases:
+      - when:
+          all:
+            - {element: PROP-09.E1, is: [MET]}
+            - {element: PROP-09.E2, is: [MET]}
+            - {element: PROP-09.E3, is: [MET]}
+            - {element: PROP-09.E4, is: [MET]}
+            - {element: PROP-09.E5, is: [MET]}
+        effects: [HUMAN_LEGAL_REVIEW, ROUTE_TO_HS]
+        status: HUMAN_LEGAL_REVIEW
+      - when:
+          all:
+            - any:
+                - {prop: PROP-07, is: [HUMAN_LEGAL_REVIEW]}
+                - {element: PROP-09.E1, is: [MET]}
+                - {element: PROP-09.E2, is: [MET]}
+                - {element: PROP-09.E3, is: [MET]}
+                - {element: PROP-09.E4, is: [MET]}
+                - {element: PROP-09.E5, is: [MET]}
+            - any:
+                - {element: PROP-09.E1, unresolved: true}
+                - {element: PROP-09.E2, unresolved: true}
+                - {element: PROP-09.E3, unresolved: true}
+                - {element: PROP-09.E4, unresolved: true}
+                - {element: PROP-09.E5, unresolved: true}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+    hs_referral: HS08
+    assumptions: [AS-025]
+    note: "PROP-09 never produces O5: it only refers to HS08 (PROP-T08)."
+
+  PROP-10:
+    kind: MANUAL
+    inputs: [C40, C44, D03]
+    elements:
+      - {id: PROP-10.E1, source: MANUAL, text: "A vulnerable group, or persons in a situation of particular vulnerability, is affected"}
+      - {id: PROP-10.E2, source: MANUAL, text: "Impact or residual risk is specifically more intense or concentrated on that group"}
+      - {id: PROP-10.E3, source: MANUAL, legal_judgement: true, text: "Grave group-specific harm is established and appears non-mitigable"}
+    cases:
+      - when:
+          all: [{element: PROP-10.E1, is: [MET]}, {element: PROP-10.E3, is: [MET]}]
+        effects: [HUMAN_LEGAL_REVIEW, SCRUTINY, ROUTE_TO_HS]
+        status: HUMAN_LEGAL_REVIEW
+      - when:
+          all: [{element: PROP-10.E1, is: [MET]}, {element: PROP-10.E2, is: [MET]}]
+        effects: [SCRUTINY, MITIGATION_REQUIRED]
+        status: SUPPORTED
+      - when: {element: PROP-10.E1, is: [MET]}
+        effects: [SCRUTINY]
+        status: SUPPORTED
+      - when:
+          any: [{q: C40, unresolved: true}, {element: PROP-10.E1, unresolved: true}]
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+    hs_referral: HS09
+    assumptions: [AS-013, AS-026, AS-028]
+    note: "Vulnerability alone is never a negative outcome or O5 (PROP-T09)."
+
+  PROP-11: {kind: SYSTEM, note: "Output rule: the report lists, per applicable PROP rule, status + evidence + linked RISK/MIT + human-review flag."}
