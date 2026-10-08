@@ -1,0 +1,66 @@
+# 07_TEST_FIXTURES — SEP (2), Mitigation (3), Audit (2).
+# Baseline outcome is O1: "no direct outcome effect" means the outcome stays O1.
+
+- id: SEP-T01
+  workbook: "Affected persons identified + material uncertainty on concrete impact; no prior consultation"
+  patch:
+    answers: {C55: "NO"}
+  expect:
+    sep_status: TO_ASSESS
+    fired: [SEP-01, SEP-02]
+    risk: {RISK-21: {initial: MODERATE, residual: null}}
+    outcome: O1
+
+- id: SEP-T02
+  workbook: "Stakeholder evidence contradicts an existing assumption relevant to linked RISK-*"
+  patch:
+    sep: {decision: "YES", effect: CONTRADICT, effect_risk_ids: [RISK-21], evidence_refs: [doc:sep-workshop-notes]}
+  expect:
+    fired: [SEP-03]
+    reassess: [RISK-21]
+    risk: {RISK-21: {initial: MODERATE, residual: null}}
+    outcome: O1
+
+- id: MIT-T01
+  workbook: "Required-before-deployment mitigation remains PROPOSED with no implementation evidence"
+  patch:
+    mitigations:
+      MIT-009: {activated: true, status: PROPOSED}
+    risks:
+      RISK-07: {scale: MEDIUM, scope: MODERATE, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE,
+                residual_scale: LOW, residual_scope: LIMITED, residual_reversibility: REVERSIBLE, residual_probability: RARE}
+  expect:
+    mitigation_status: {MIT-009: PROPOSED}
+    risk: {RISK-07: {initial: MODERATE, residual: null}}
+    outcome: O3
+
+- id: MIT-T02
+  workbook: "Measure implemented; evidence supplied; verification meets closure criterion"
+  patch:
+    mitigations:
+      MIT-009: {activated: true, status: VERIFIED_EFFECTIVE, evidence_refs: [doc:mit-009-test-report]}
+    risks:
+      RISK-07: {scale: MEDIUM, scope: MODERATE, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE,
+                residual_scale: LOW, residual_scope: LIMITED, residual_reversibility: REVERSIBLE, residual_probability: RARE}
+  expect:
+    mitigation_status: {MIT-009: VERIFIED_EFFECTIVE}
+    risk: {RISK-07: {initial: MODERATE, residual: VERY_LOW}}
+    outcome: O1
+
+- id: MIT-T03
+  workbook: "Mitigation is claimed implemented but evidence needed to verify effectiveness/residual risk is unavailable"
+  patch:
+    mitigations:
+      MIT-009: {activated: true, status: IMPLEMENTED_UNVERIFIED}
+  expect:
+    mitigation_status: {MIT-009: IMPLEMENTED_UNVERIFIED}
+    fired: [MIT-03]
+    outcome: O4
+
+- id: AUD-T01
+  workbook: "Rule output exists but has no evidence_refs or workbook_version"
+  special: test_engine.py::test_aud_t01_incomplete_event_is_not_a_closure
+
+- id: AUD-T02
+  workbook: "Same normalized engine state executed twice under same frozen workbook version"
+  special: test_engine.py::test_aud_t02_same_state_same_result

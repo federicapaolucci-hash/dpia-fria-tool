@@ -1,0 +1,89 @@
+# Clean, complete core-only assessment (not high-risk, deployer role). Expected outcome: O1.
+# Every 07_TEST_FIXTURES case is this state plus the patch that its prose describes.
+# Answers: a bare YES/NO/UNKNOWN/N_A/NOT_OWNED is the answer state; anything else is the value.
+
+assessment_id: FIXTURE
+workbook_version: T17-REV2
+
+answers:
+  # INTRO
+  C01: "AI-assisted pre-screening of job applications"
+  C02: N_A
+  C03: "NO"
+  N01: "Ranks applications against published job criteria for HR staff review (provider instructions v2.1)"
+  C04: "Recruitment AI Pilot"
+  C05: DEPLOYER
+  C06: [CONTROLLER_DP_TEAM]
+  # WHAT
+  W01: "Support HR staff in shortlisting candidates"
+  Q12: [EMPLOYMENT_HR]
+  FOLLOW: "NO"
+  C10: "Shortlisting support for open positions"
+  C11: "CVs are parsed, scored against criteria and shown to HR reviewers"
+  C12: "Used by the HR team of a mid-size company; final decision always by a recruiter"
+  C03B: "Provider instructions for use v2.1, section 3"
+  # HOW
+  C38: [SCORING_RANKING]
+  C39: SUPPORT_TO_HUMAN_DECISION
+  C40: [WORKERS_CANDIDATES]
+  N02: "YES"
+  C46: "YES"
+  C47: [HUMAN_IN_THE_LOOP, OVERRIDE_POWER]
+  C48: LOW
+  C50: "YES"
+  C51: "YES"
+  C52: [COMPLAINT_CHANNEL, HUMAN_REVIEW_ON_REQUEST]
+  C53: "YES"
+  C55: "NO"
+  # WHY
+  C13: "YES"
+  Q22: [LEGITIMATE_INTEREST]
+  Q23: "Employment relationship: power imbalance mitigated by human decision and opt-out"
+  C14: "YES"
+  C15: "YES"
+  C16: "Legitimate interest assessment documented (LIA-2026-04)"
+  C17: "Data used only for the application they were submitted for"
+  C18: [COMMON_PERSONAL_DATA]
+  C19: [DATA_SUBJECT]
+  C20: "YES"
+  C21: "YES"
+  C22: "Only CV fields relevant to the published criteria are processed"
+  C23: "Deleted 6 months after the end of the selection"
+  C41: "YES"
+  C42: [ACCURACY_CHECK, REPRESENTATIVENESS]
+  C43: LOW
+  C44: "YES"
+  C28: "YES"
+  C29: [ACCESS, RECTIFICATION, OBJECTION]
+  C31: "YES"
+  C32: "Manual screening of all CVs was assessed and excluded for volume; keyword filters were less accurate"
+  C33: "Interference limited to ranking; human decision, contestation and deletion keep impact low"
+  Q16: "YES"
+  C34: MODERATE
+  C35: "NO"
+
+# Reviewer checks: all done, no deficiency found.
+elements:
+  QUAL-01.E1: NOT_MET
+  QUAL-01.E2: NOT_MET
+  QUAL-01.E3: NOT_MET
+  QUAL-01.E4: NOT_MET
+  QUAL-01.E5: NOT_MET
+  QUAL-01.E6: NOT_MET
+  LEGAL-01.E1: NOT_MET
+  DATA-01.E1: NOT_MET
+  DQ-01.E1: NOT_MET
+  BIAS-01.E1: NOT_MET
+  TRANS-01.E1: NOT_MET
+  REM-01.E1: NOT_MET
+  PROP-02.E1: NOT_MET
+  PROP-03.E1: NOT_MET
+  PROP-04.E1: NOT_MET
+  PROP-05.E1: NOT_MET
+  PROP-05.E2: NOT_MET
+  PROP-06.E1: NOT_MET
+  PROP-06.E2: NOT_MET
+  PROP-10.E1: NOT_MET
+
+risks:
+  RISK-21: {scale: MEDIUM, scope: LIMITED, reversibility: REVERSIBLE, probability: POSSIBLE}

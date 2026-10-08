@@ -1,0 +1,49 @@
+# 07_TEST_FIXTURES — Outcome (5). Expected values copied from the workbook; never changed to pass.
+
+- id: FIX-O1
+  workbook: "All required inputs complete; no HS; all approved required mitigations VERIFIED EFFECTIVE; no restrictive conditions"
+  patch:
+    risks:
+      RISK-07: {scale: MEDIUM, scope: MODERATE, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE}
+    mitigations:
+      MIT-009: {activated: true, status: VERIFIED_EFFECTIVE, evidence_refs: [doc:mit-009-test-report]}
+  expect:
+    outcome: O1
+    mitigation_status: {MIT-009: VERIFIED_EFFECTIVE}
+
+- id: FIX-O2
+  workbook: "No HS/gap/unresolved remediation; one approved continuous/pilot condition remains"
+  patch:
+    mitigations:
+      MIT-001: {activated: true, status: VERIFIED_EFFECTIVE, evidence_refs: [doc:mit-001-test-report]}
+  expect:
+    outcome: O2
+    flags: {OPEN_CONDITION: true, OPEN_REQUIRED_REMEDIATION: false}
+
+- id: FIX-O3
+  workbook: "No HS/material gap; one approved required-before-deployment MIT remains PROPOSED/IN IMPLEMENTATION"
+  patch:
+    mitigations:
+      MIT-009: {activated: true, status: IN_IMPLEMENTATION, evidence_refs: [doc:mit-009-workplan]}
+  expect:
+    outcome: O3
+    flags: {MATERIAL_EVIDENCE_GAP: false, OPEN_REQUIRED_REMEDIATION: true}
+
+- id: FIX-O4
+  workbook: "No confirmed HS; material evidence needed for a required conclusion is UNKNOWN/unavailable"
+  patch:
+    answers: {C20: UNKNOWN}
+  expect:
+    outcome: O4
+    flags: {HS_MET: false, MATERIAL_EVIDENCE_GAP: true}
+
+- id: FIX-O5
+  workbook: "At least one approved HS fully MET including non-remediability/human gate where required"
+  patch:
+    answers: {C03: "YES"}
+    elements: {HS07.E1: MET}
+    human_gates: {HS07: COMPLETED}
+  expect:
+    outcome: O5
+    hs: {HS07: MET}
+    routing_suspended: true

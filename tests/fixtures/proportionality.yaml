@@ -1,0 +1,89 @@
+# 07_TEST_FIXTURES — Proportionality (9): structured PROP status, no PROP rule ever produces O5.
+
+- id: PROP-T01
+  workbook: "One necessary proportionality prerequisite is UNKNOWN (e.g. harm scenario or alternatives not determined)"
+  patch:
+    answers: {C34: UNKNOWN}
+  expect: {prop: {PROP-01: EVIDENCE_GAP}, hs_opened: [], not_outcome: O5}
+
+- id: PROP-T02
+  workbook: "Concrete use lacks a demonstrated rational connection to the declared purpose, but evidence is sufficient to assess the gap"
+  patch:
+    elements: {PROP-02.E1: MET}
+  expect:
+    prop: {PROP-02: NOT_DEMONSTRATED}
+    prop_effects: {PROP-02: [REMEDIATION_REQUIRED, SCRUTINY]}
+    hs_opened: []
+    not_outcome: O5
+
+- id: PROP-T03
+  workbook: "Less intrusive alternatives have not been analysed"
+  patch:
+    answers: {C31: "NO"}
+  expect: {prop: {PROP-03: EVIDENCE_GAP}, hs_opened: [], not_outcome: O5}
+
+- id: PROP-T04
+  workbook: "A reasonably practicable less intrusive alternative exists and was excluded without sufficient justification"
+  patch:
+    elements: {PROP-03.E1: MET}
+  expect:
+    prop: {PROP-03: NOT_DEMONSTRATED}
+    prop_effects: {PROP-03: [REMEDIATION_REQUIRED, HUMAN_LEGAL_REVIEW]}
+    hs_opened: []
+    not_outcome: O5
+
+- id: PROP-T05
+  workbook: "C33 contains only 'proportionate/acceptable/necessary' with no harm, alternatives, safeguards or residual impact analysis"
+  patch:
+    answers: {C33: "The processing is proportionate, acceptable and necessary."}
+    elements: {PROP-05.E2: MET}
+  expect:
+    prop: {PROP-05: NOT_DEMONSTRATED}
+    prop_effects: {PROP-05: [REMEDIATION_REQUIRED]}
+    hs_opened: []
+    not_outcome: O5
+
+- id: PROP-T06
+  workbook: "Safeguard is declared present but operational effectiveness is not evidenced"
+  patch:
+    elements: {PROP-06.E1: MET}
+  expect:
+    prop: {PROP-06: EVIDENCE_GAP}
+    risk: {RISK-21: {initial: MODERATE, residual: null}}
+    hs_opened: []
+    not_outcome: O5
+
+- id: PROP-T07
+  workbook: "After VERIFIED EFFECTIVE safeguards/mitigations, residual risk remains HIGH/material"
+  patch:
+    risks:
+      RISK-21:
+        {scale: HIGH, scope: WIDE, reversibility: DIFFICULT_TO_REVERSE, probability: LIKELY,
+         residual_scale: HIGH, residual_scope: MODERATE, residual_reversibility: PARTLY_REVERSIBLE, residual_probability: POSSIBLE}
+    mitigations:
+      MIT-038: {activated: true, status: VERIFIED_EFFECTIVE, evidence_refs: [doc:mit-038-test-report]}
+  expect:
+    prop: {PROP-07: HUMAN_LEGAL_REVIEW}
+    risk: {RISK-21: {initial: HIGH, residual: HIGH}}
+    hs_opened: []
+    not_outcome: O5
+
+- id: PROP-T08
+  workbook: "Grave harm + safeguards/mitigations considered + high residual impact + further reasonable mitigation appears unable to reduce it acceptably"
+  patch:
+    elements: {PROP-09.E1: MET, PROP-09.E2: MET, PROP-09.E3: MET, PROP-09.E4: MET, PROP-09.E5: MET}
+  expect:
+    prop: {PROP-09: HUMAN_LEGAL_REVIEW}
+    hs_opened: [HS08]
+    hs: {HS08: UNCERTAIN}
+    not_outcome: O5
+
+- id: PROP-T09
+  workbook: "Vulnerable group is affected, but grave specific non-mitigable harm is not established"
+  patch:
+    elements: {PROP-10.E1: MET, PROP-10.E3: NOT_MET}
+  expect:
+    prop: {PROP-10: SUPPORTED}
+    prop_effects: {PROP-10: [SCRUTINY]}
+    hs_opened: []
+    not_outcome: O5

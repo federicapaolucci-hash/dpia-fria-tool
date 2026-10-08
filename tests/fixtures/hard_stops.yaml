@@ -1,0 +1,142 @@
+# 07_TEST_FIXTURES — Hard stops (18): positive and negative for HS01–HS09, human gate = YES in all.
+# Positive: every constituent element MET + legal gate COMPLETED -> HS MET, O5.
+# Negative: one element NOT_MET (+ gate) -> HS NOT_MET, never O5.
+# HS08/HS09 need a verified mitigation linked to the HS for the mitigation element (AS-018).
+
+- id: HS01-POS
+  workbook: "Manifestly unlawful purpose + reasoned legal determination + purpose cannot be lawfully redefined"
+  patch:
+    elements: {HS01.E1: MET, HS01.E2: MET, HS01.E3: MET}
+    human_gates: {HS01: COMPLETED}
+  expect: {hs: {HS01: MET}, outcome: O5}
+
+- id: HS01-NEG
+  workbook: "At least one constituent element absent (e.g. lawful redesign possible)"
+  patch:
+    elements: {HS01.E1: MET, HS01.E2: MET, HS01.E3: NOT_MET}
+    human_gates: {HS01: COMPLETED}
+  expect: {hs: {HS01: NOT_MET}, not_outcome: O5}
+
+- id: HS02-POS
+  workbook: "Legal basis inadequate + no valid alternative basis + no lawful redesign"
+  patch:
+    answers: {C14: "NO"}
+    elements: {HS02.E2: MET, HS02.E3: MET}
+    human_gates: {HS02: COMPLETED}
+  expect: {hs: {HS02: MET}, outcome: O5}
+
+- id: HS02-NEG
+  workbook: "Alternative lawful basis or lawful redesign available"
+  patch:
+    answers: {C14: "NO"}
+    elements: {HS02.E2: NOT_MET, HS02.E3: NOT_MET}
+    human_gates: {HS02: COMPLETED}
+  expect: {hs: {HS02: NOT_MET}, not_outcome: O5}
+
+- id: HS03-POS
+  workbook: "Data reuse + incompatibility established + cannot be reconfigured by purpose restriction/new collection"
+  patch:
+    elements: {HS03.E1: MET, HS03.E2: MET, HS03.E3: MET}
+    human_gates: {HS03: COMPLETED}
+  expect: {hs: {HS03: MET}, outcome: O5}
+
+- id: HS03-NEG
+  workbook: "Reuse compatible or lawful reconfiguration available"
+  patch:
+    elements: {HS03.E1: MET, HS03.E2: NOT_MET, HS03.E3: NOT_MET}
+    human_gates: {HS03: COMPLETED}
+  expect: {hs: {HS03: NOT_MET}, not_outcome: O5}
+
+- id: HS04-POS
+  workbook: "Use case inconsistent with intended purpose + grave rights risk + use cannot be reconfigured"
+  patch:
+    answers: {N02: "NO"}
+    elements: {HS04.E2: MET, HS04.E3: MET}
+    human_gates: {HS04: COMPLETED}
+  expect: {hs: {HS04: MET}, outcome: O5}
+
+- id: HS04-NEG
+  workbook: "Use can be reconfigured or grave rights risk not established"
+  patch:
+    answers: {N02: "NO"}
+    elements: {HS04.E2: MET, HS04.E3: NOT_MET}
+    human_gates: {HS04: COMPLETED}
+  expect: {hs: {HS04: NOT_MET}, not_outcome: O5}
+
+- id: HS05-POS
+  workbook: "Human oversight essential + structurally impossible + non-remediable"
+  patch:
+    elements: {HS05.E1: MET, HS05.E2: MET, HS05.E3: MET}
+    human_gates: {HS05: COMPLETED}
+  expect: {hs: {HS05: MET}, outcome: O5}
+
+- id: HS05-NEG
+  workbook: "Oversight can be introduced/redesigned or essentiality not established"
+  patch:
+    elements: {HS05.E1: MET, HS05.E2: NOT_MET, HS05.E3: NOT_MET}
+    human_gates: {HS05: COMPLETED}
+  expect: {hs: {HS05: NOT_MET}, not_outcome: O5}
+
+- id: HS06-POS
+  workbook: "Contestability essential + structurally impossible + non-remediable"
+  patch:
+    elements: {HS06.E1: MET, HS06.E2: MET, HS06.E3: MET}
+    human_gates: {HS06: COMPLETED}
+  expect: {hs: {HS06: MET}, outcome: O5}
+
+- id: HS06-NEG
+  workbook: "Effective contestability/remedy can be implemented"
+  patch:
+    elements: {HS06.E1: MET, HS06.E2: NOT_MET, HS06.E3: NOT_MET}
+    human_gates: {HS06: COMPLETED}
+  expect: {hs: {HS06: NOT_MET}, not_outcome: O5}
+
+- id: HS07-POS
+  workbook: "Use expressly prohibited by applicable law and legal gate confirms prohibition"
+  patch:
+    answers: {C03: "YES"}
+    elements: {HS07.E1: MET}
+    human_gates: {HS07: COMPLETED}
+  expect: {hs: {HS07: MET}, outcome: O5}
+
+- id: HS07-NEG
+  workbook: "Prohibition not established / exception or non-applicability remains"
+  patch:
+    answers: {C03: "YES"}
+    elements: {HS07.E1: NOT_MET}
+    human_gates: {HS07: COMPLETED}
+  expect: {hs: {HS07: NOT_MET}, not_outcome: O5, routing_suspended: false}
+
+- id: HS08-POS
+  workbook: "Grave rights harm established + mitigations assessed and insufficient + risk not reducible to acceptable level"
+  patch:
+    elements: {HS08.E1: MET, HS08.E2: MET, HS08.E3: MET}
+    human_gates: {HS08: COMPLETED}
+    mitigations:
+      MIT-038: {activated: true, status: VERIFIED_INEFFECTIVE, linked_rule_ids: [HS08], evidence_refs: [doc:mit-038-test-report]}
+  expect: {hs: {HS08: MET}, outcome: O5}
+
+- id: HS08-NEG
+  workbook: "Mitigation reduces risk to acceptable level or insufficiency not established"
+  patch:
+    elements: {HS08.E1: MET, HS08.E2: MET, HS08.E3: NOT_MET}
+    human_gates: {HS08: COMPLETED}
+    mitigations:
+      MIT-038: {activated: true, status: VERIFIED_EFFECTIVE, linked_rule_ids: [HS08], evidence_refs: [doc:mit-038-test-report]}
+  expect: {hs: {HS08: NOT_MET}, not_outcome: O5}
+
+- id: HS09-POS
+  workbook: "Vulnerable group + grave specific harm + harm non-mitigable"
+  patch:
+    elements: {HS09.E1: MET, HS09.E2: MET, HS09.E3: MET}
+    human_gates: {HS09: COMPLETED}
+    mitigations:
+      MIT-039: {activated: true, status: VERIFIED_INEFFECTIVE, linked_rule_ids: [HS09], evidence_refs: [doc:mit-039-test-report]}
+  expect: {hs: {HS09: MET}, outcome: O5}
+
+- id: HS09-NEG
+  workbook: "Specific grave harm or non-mitigability not established"
+  patch:
+    elements: {HS09.E1: MET, HS09.E2: NOT_MET, HS09.E3: NOT_MET}
+    human_gates: {HS09: COMPLETED}
+  expect: {hs: {HS09: NOT_MET}, not_outcome: O5}

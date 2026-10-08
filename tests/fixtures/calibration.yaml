@@ -1,0 +1,31 @@
+# 07_TEST_FIXTURES — Calibration (5): severity = MAX(scale, scope, reversibility) x probability.
+
+- id: CAL-01
+  workbook: "LOW / LIMITED / REVERSIBLE / RARE"
+  patch:
+    risks: {RISK-21: {scale: LOW, scope: LIMITED, reversibility: REVERSIBLE, probability: RARE}}
+  expect: {risk: {RISK-21: {initial: VERY_LOW}}}
+
+- id: CAL-02
+  workbook: "MEDIUM / MODERATE / PARTLY REVERSIBLE / POSSIBLE"
+  patch:
+    risks: {RISK-21: {scale: MEDIUM, scope: MODERATE, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE}}
+  expect: {risk: {RISK-21: {initial: MODERATE}}}
+
+- id: CAL-03
+  workbook: "HIGH / MODERATE / PARTLY REVERSIBLE / POSSIBLE"
+  patch:
+    risks: {RISK-21: {scale: HIGH, scope: MODERATE, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE}}
+  expect: {risk: {RISK-21: {initial: HIGH}}, not_outcome: O5}
+
+- id: CAL-04
+  workbook: "HIGH / SYSTEMIC / PARTLY REVERSIBLE / POSSIBLE"
+  patch:
+    risks: {RISK-21: {scale: HIGH, scope: SYSTEMIC, reversibility: PARTLY_REVERSIBLE, probability: POSSIBLE}}
+  expect: {risk: {RISK-21: {initial: HIGH}}, not_outcome: O5}
+
+- id: CAL-05
+  workbook: "HIGH / SYSTEMIC / DIFFICULT TO REVERSE / LIKELY"
+  patch:
+    risks: {RISK-21: {scale: HIGH, scope: SYSTEMIC, reversibility: DIFFICULT_TO_REVERSE, probability: LIKELY}}
+  expect: {risk: {RISK-21: {initial: VERY_HIGH, residual: null}}, not_outcome: O5}
