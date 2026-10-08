@@ -9,13 +9,7 @@ APP_CAPTION = (
     "A DPIA-based workflow for identifying fundamental-rights risks, "
     "with role-specific AI Act add-ons for providers and deployers."
 )
-CREDITS = """
-**Created by Federica Paolucci for DIGCON — FIS-funded project, Baffi Centre, Bocconi University.**
-
-**Tested by Silvia Pellegrini and Eleonora Silva for DIGCON — FIS-funded project, Baffi Centre, Bocconi University.**
-
-**All rights reserved**
-"""
+FOOTER = "DIGCON — FIS-funded project, Baffi Centre, Bocconi University · All rights reserved"
 DISCLAIMER = (
     "Research prototype — for academic and sandbox testing purposes only. "
     "Do not enter personal data, confidential DPIAs, trade secrets or sensitive organisational information."
@@ -68,6 +62,22 @@ OUTCOME_TEXT = {
 }
 
 ANSWERED = "ANSWERED"
+
+START_TITLE = "0. Start"
+RESULT_TITLE = "Result"
+REVIEW_TITLE = "6. Hard stops and reviews"
+RISKS_TITLE = "7. Risk register"
+MITIGATION_TITLE = "8. Mitigation plan"
+SEP_TITLE = "9. Stakeholder engagement"
+
+# Notes shown under specific questions. Interface guidance only: they change no logic.
+QUESTION_NOTES = {
+    "C05": "This role opens the AI Act add-ons: Provider → Article 9 (5A); Deployer → Article 27 (5B, once D00 = YES); "
+           "Joint → both. The system must also be HIGH RISK = YES (section 2).",
+    "C06": "For the record only: it does not open any add-on. The routing role is C05.",
+    "FOLLOW": "YES opens the add-on(s) for the role chosen in C05 (section 1).",
+    "D00": "YES opens the Article 27 questions D01–D10.",
+}
 
 
 def subsection(name: str) -> str:

@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from digcon.domain.enums import Phase
 from digcon.domain.models import AssessmentState
 from digcon.ui import state as ui_state
+from digcon.ui.labels import PHASE_TITLES, RESULT_TITLE, REVIEW_TITLE
 from engine_support import build_state
 
 TIMEOUT = 60
@@ -21,7 +23,13 @@ def app(patch=None) -> AppTest:
     return at.run()
 
 
+def goto(at: AppTest, title) -> AppTest:
+    title = PHASE_TITLES[title] if isinstance(title, Phase) else title
+    return at.sidebar.radio(key="nav").set_value(title).run()
+
+
 def outcome(at: AppTest) -> str:
+    goto(at, RESULT_TITLE)
     return next(m.value for m in at.metric if m.label == "Recommended outcome")
 
 
@@ -35,7 +43,25 @@ def test_empty_app_renders_with_header_and_disclaimer():
     no_errors(at)
     assert at.title[0].value == "DPIA-based Fundamental Rights Assessment Tool"
     assert "Research prototype" in at.info[0].value
+    page = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.caption)
+    assert "Silvia" not in page and "Federica" not in page and "Eleonora" not in page
     assert outcome(at) == "O4"  # nothing answered yet: evidence gaps
+
+
+def test_every_section_renders():
+    at = app({})
+    for title in at.sidebar.radio(key="nav").options:
+        goto(at, title)
+        no_errors(at)
+
+
+def test_deployer_role_explains_what_is_missing():
+    at = goto(app({"answers": {"C05": "DEPLOYER", "FOLLOW": "NO"}}), Phase.DEPLOYER)
+    assert any("HIGH RISK = YES" in i.value for i in at.info)
+    at = goto(app({"answers": {"C05": "DEPLOYER", "FOLLOW": "YES"}}), Phase.DEPLOYER)
+    assert any("D00 = YES" in i.value for i in at.info)
+    at.radio(key="w.D00").set_value("YES").run()
+    assert at.text_area(key="w.D01.value") is not None
 
 
 def test_baseline_assessment_shows_o1():
@@ -45,12 +71,13 @@ def test_baseline_assessment_shows_o1():
 
 
 def test_widget_answer_updates_outcome_and_opens_hard_stop():
-    at = app({})
+    at = goto(app({}), Phase.HOW)
     at.radio(key="w.C46").set_value("NO").run()
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["C46"]["state"] == "NO"
     assert outcome(at) == "O4"  # HS05 opened by the signal, not evaluated yet
     # The lawyer excludes HS05 from the UI.
+    goto(at, REVIEW_TITLE)
     at.selectbox(key="w.HS05.E1").set_value("MET").run()
     at.selectbox(key="w.HS05.E2").set_value("NOT_MET").run()
     at.checkbox(key="w.gate.HS05").check().run()
@@ -61,7 +88,7 @@ def test_widget_answer_updates_outcome_and_opens_hard_stop():
 
 
 def test_unknown_status_on_text_question_is_a_gap_not_a_no():
-    at = app({})
+    at = goto(app({}), Phase.WHAT)
     at.selectbox(key="w.C11.status").set_value("UNKNOWN").run()
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["C11"]["state"] == "UNKNOWN"
@@ -69,9 +96,12 @@ def test_unknown_status_on_text_question_is_a_gap_not_a_no():
 
 
 def test_hidden_answers_survive_in_the_store():
-    at = app({"answers": {"FOLLOW": "YES", "C05": "PROVIDER", "P01": "YES"}})
+    at = goto(app({"answers": {"FOLLOW": "YES", "C05": "PROVIDER", "P01": "YES"}}), Phase.WHAT)
     at.radio(key="w.FOLLOW").set_value("NO").run()  # provider add-on closes
+    goto(at, Phase.PROVIDER)
+    goto(at, Phase.WHAT)
     at.radio(key="w.FOLLOW").set_value("YES").run()  # and reopens
+    goto(at, Phase.PROVIDER)
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["P01"]["state"] == "YES"
     assert at.radio(key="w.P01").value == "YES"
@@ -87,16 +117,19 @@ def test_hidden_answers_survive_in_the_store():
 )
 def test_complete_assessment_per_role_from_the_ui(role, extra):
     """Acceptance check: one full assessment per role reaches an outcome with an audit trail."""
-    at = app({"answers": {"FOLLOW": "YES", **extra}})
+    at = goto(app({"answers": {"FOLLOW": "YES", **extra}}), Phase.INTRO)
     at.selectbox(key="w.C05").set_value(role).run()
     if role in ("PROVIDER", "JOINT"):
+        goto(at, Phase.PROVIDER)
         for q, v in {"P01": "YES", "P02": "NO", "P03": "YES", "P04": "YES", "P05": "NO",
                      "P06": "YES", "P07": "YES", "P08": "YES", "P09": "YES", "P10": "YES"}.items():
             at.radio(key=f"w.{q}").set_value(v).run()
+        goto(at, REVIEW_TITLE)
         at.checkbox(key="w.gate.RMS-9I").check().run()
         at.text_input(key="w.gate.RMS-9I.decision").input("Residual risk acceptable").run()
         at.text_input(key="w.gate.RMS-9I.by").input("Provider governance board").run()
     if role in ("DEPLOYER", "JOINT"):
+        goto(at, Phase.DEPLOYER)
         texts = {
             "D01": "Recruiters use the ranking when shortlisting",
             "D02": "12-month pilot, daily use",
@@ -111,6 +144,7 @@ def test_complete_assessment_per_role_from_the_ui(role, extra):
         at.radio(key="w.D07").set_value("NO").run()
         at.radio(key="w.D08").set_value("NO").run()
         at.selectbox(key="w.D10").set_value("NOT_REQUIRED").run()
+        goto(at, REVIEW_TITLE)
         for el in ("FRIA-27A.E1", "FRIA-27D.E1", "FRIA-27E.E1", "FRIA-27F.E1"):
             at.selectbox(key=f"w.{el}").set_value("NOT_MET").run()
     no_errors(at)

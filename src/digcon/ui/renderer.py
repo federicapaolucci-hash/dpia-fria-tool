@@ -10,7 +10,7 @@ from digcon.domain.enums import AnswerKind, NotificationStatus, RiskLevel, Role,
 from digcon.domain.models import ConfigBundle, QuestionSpec, RuleElementSpec
 
 from . import state
-from .labels import ANSWERED
+from .labels import ANSWERED, QUESTION_NOTES
 
 ELEMENT_STATES = [s.value for s in RuleElementState]
 
@@ -73,6 +73,12 @@ def _sync(cfg: ConfigBundle, q: QuestionSpec) -> None:
 
 
 def question(cfg: ConfigBundle, q: QuestionSpec) -> None:
+    _question(cfg, q)
+    if q.id in QUESTION_NOTES:
+        st.caption(f"ℹ️ {QUESTION_NOTES[q.id]}")
+
+
+def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
     stored = state.store()["answers"].get(q.id) or {}
     k = f"w.{q.id}"
     names = _option_names(cfg, q)
