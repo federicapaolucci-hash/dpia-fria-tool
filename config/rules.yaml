@@ -258,6 +258,8 @@ rules:
       effects:
       - EVIDENCE_GAP
     gap_effects: []
+    review:
+      flag: VISIBLE_QUESTION_NOT_APPLICABLE
     elements: []
     routes_to: []
     assumptions:
@@ -323,7 +325,8 @@ rules:
           - MET
       effects:
       - REMEDIATION_REQUIRED
-    gap:
+    gap_effects: []
+    review:
       any:
       - all:
         - q: C12
@@ -355,8 +358,6 @@ rules:
           provided: true
         - element: QUAL-01.E6
           unresolved: true
-    gap_effects:
-    - EVIDENCE_GAP
     elements:
     - id: QUAL-01.E1
       text: C12 (operational and organisational context) is non-empty but substantially insufficient
@@ -883,16 +884,16 @@ rules:
       effects:
       - REMEDIATION_REQUIRED
     gap:
-      any:
-      - q: D01
-        unresolved: true
-      - all:
-        - q: D01
-          provided: true
-        - element: FRIA-27A.E1
-          unresolved: true
+      q: D01
+      unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: D01
+        provided: true
+      - element: FRIA-27A.E1
+        unresolved: true
     elements:
     - id: FRIA-27A.E1
       text: The deployer's process of use (D01) is not coherent with the intended purpose (N01)
@@ -1039,13 +1040,14 @@ rules:
       - element: FRIA-27D.E1
         is:
         - MET
-      - all:
-        - q: D04
-          provided: true
-        - element: FRIA-27D.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: D04
+        provided: true
+      - element: FRIA-27D.E1
+        unresolved: true
     elements:
     - id: FRIA-27D.E1
       text: The specific risks in D04 were assessed without the provider information under Article 13
@@ -1104,16 +1106,16 @@ rules:
       - REMEDIATION_REQUIRED
       - SCRUTINY
     gap:
-      any:
-      - q: D05
-        unresolved: true
-      - all:
-        - q: D05
-          provided: true
-        - element: FRIA-27E.E1
-          unresolved: true
+      q: D05
+      unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: D05
+        provided: true
+      - element: FRIA-27E.E1
+        unresolved: true
     elements:
     - id: FRIA-27E.E1
       text: Human-oversight implementation (D05, C46–C48) is insufficient against the instructions for use
@@ -1167,16 +1169,16 @@ rules:
       - REMEDIATION_REQUIRED
       - MITIGATION_REQUIRED
     gap:
-      any:
-      - q: D06
-        unresolved: true
-      - all:
-        - q: D06
-          provided: true
-        - element: FRIA-27F.E1
-          unresolved: true
+      q: D06
+      unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: D06
+        provided: true
+      - element: FRIA-27F.E1
+        unresolved: true
     elements:
     - id: FRIA-27F.E1
       text: Measures, internal governance or complaint mechanisms for materialised risks (D06) are absent or inadequate
@@ -2992,7 +2994,6 @@ rules:
     outcome: O4
     assumptions:
     - AS-013
-    - AS-027
 - id: OUT-03
   family: OUT
   order: 51
@@ -3313,17 +3314,18 @@ rules:
         unresolved: true
       - q: C17
         unresolved: true
-      - all:
-        - any:
-          - q: C16
-            provided: true
-          - q: C17
-            provided: true
-        - element: LEGAL-01.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
     - HUMAN_LEGAL_REVIEW
+    review:
+      all:
+      - any:
+        - q: C16
+          provided: true
+        - q: C17
+          provided: true
+      - element: LEGAL-01.E1
+        unresolved: true
     elements:
     - id: LEGAL-01.E1
       text: The legal-basis or purpose-limitation reasoning (C16, C17) is inadequate or inconsistent with Q22 /
@@ -3419,16 +3421,17 @@ rules:
         unresolved: true
       - q: Q16
         unresolved: true
-      - all:
-        - any:
-          - q: C18
-            provided: true
-          - q: C19
-            provided: true
-        - element: DATA-01.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - any:
+        - q: C18
+          provided: true
+        - q: C19
+          provided: true
+      - element: DATA-01.E1
+        unresolved: true
     elements:
     - id: DATA-01.E1
       text: Control over data categories or sources (C18, C19) is inadequate for the purpose
@@ -3500,13 +3503,14 @@ rules:
         unresolved: true
       - q: C43
         unresolved: true
-      - all:
-        - q: C42
-          provided: true
-        - element: DQ-01.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: C42
+        provided: true
+      - element: DQ-01.E1
+        unresolved: true
     elements:
     - id: DQ-01.E1
       text: The data-quality measures in place (C42) are inadequate
@@ -3569,16 +3573,16 @@ rules:
       - SCRUTINY
       - RISK_INPUT
     gap:
-      any:
-      - q: C44
-        unresolved: true
-      - all:
-        - q: C44
-          provided: true
-        - element: BIAS-01.E1
-          unresolved: true
+      q: C44
+      unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: C44
+        provided: true
+      - element: BIAS-01.E1
+        unresolved: true
     elements:
     - id: BIAS-01.E1
       text: Disproportionate impact (disparity) on protected groups has been detected
@@ -3640,13 +3644,14 @@ rules:
         unresolved: true
       - q: C29
         unresolved: true
-      - all:
-        - q: C29
-          provided: true
-        - element: TRANS-01.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: C29
+        provided: true
+      - element: TRANS-01.E1
+        unresolved: true
     elements:
     - id: TRANS-01.E1
       text: Operational support for data-subject rights (C29) is inadequate
@@ -3726,13 +3731,14 @@ rules:
         unresolved: true
       - q: C53
         unresolved: true
-      - all:
-        - q: C52
-          provided: true
-        - element: REM-01.E1
-          unresolved: true
     gap_effects:
     - EVIDENCE_GAP
+    review:
+      all:
+      - q: C52
+        provided: true
+      - element: REM-01.E1
+        unresolved: true
     elements:
     - id: REM-01.E1
       text: The contestability measures in place (C52) are inadequate
@@ -3932,13 +3938,16 @@ rules:
       - SCRUTINY
       status: NOT_DEMONSTRATED
     - when:
-        any:
-        - q: N02
-          unresolved: true
-        - element: PROP-02.E1
-          unresolved: true
+        q: N02
+        unresolved: true
       effects:
       - EVIDENCE_GAP
+      status: EVIDENCE_GAP
+    - when:
+        element: PROP-02.E1
+        unresolved: true
+      effects:
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     - when:
         all:
@@ -4020,7 +4029,7 @@ rules:
         element: PROP-03.E1
         unresolved: true
       effects:
-      - EVIDENCE_GAP
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     - when:
         element: PROP-03.E1
@@ -4102,10 +4111,14 @@ rules:
           unresolved: true
         - q: Q16
           unresolved: true
-        - element: PROP-04.E1
-          unresolved: true
       effects:
       - EVIDENCE_GAP
+      status: EVIDENCE_GAP
+    - when:
+        element: PROP-04.E1
+        unresolved: true
+      effects:
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     - when:
         all:
@@ -4198,7 +4211,7 @@ rules:
         - element: PROP-05.E2
           unresolved: true
       effects:
-      - EVIDENCE_GAP
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     - when:
         all:
@@ -4321,16 +4334,32 @@ rules:
             provided: true
           - q: D06
             provided: true
+        - element: PROP-06.E1
+          is:
+          - MET
+      effects:
+      - EVIDENCE_GAP
+      status: EVIDENCE_GAP
+    - when:
+        all:
         - any:
-          - element: PROP-06.E1
-            is:
-            - MET
+          - q: C42
+            provided: true
+          - q: C47
+            provided: true
+          - q: C52
+            provided: true
+          - q: D05
+            provided: true
+          - q: D06
+            provided: true
+        - any:
           - element: PROP-06.E1
             unresolved: true
           - element: PROP-06.E2
             unresolved: true
       effects:
-      - EVIDENCE_GAP
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     - when:
         all:
@@ -4603,7 +4632,7 @@ rules:
           - element: PROP-09.E5
             unresolved: true
       effects:
-      - EVIDENCE_GAP
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     gap_effects: []
     elements:
@@ -4722,13 +4751,16 @@ rules:
       - SCRUTINY
       status: SUPPORTED
     - when:
-        any:
-        - q: C40
-          unresolved: true
-        - element: PROP-10.E1
-          unresolved: true
+        q: C40
+        unresolved: true
       effects:
       - EVIDENCE_GAP
+      status: EVIDENCE_GAP
+    - when:
+        element: PROP-10.E1
+        unresolved: true
+      effects:
+      - VERIFICATION_REQUEST
       status: EVIDENCE_GAP
     gap_effects: []
     elements:

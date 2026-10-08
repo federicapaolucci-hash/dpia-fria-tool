@@ -112,7 +112,10 @@ class AnswerIs(_Spec):
 
 
 class AnswerUnresolved(_Spec):
-    """Visible answer missing, or UNKNOWN / N_A / NOT_OWNED. Never equivalent to NO."""
+    """Visible answer missing, UNKNOWN or NOT_OWNED. Never equivalent to NO.
+
+    N_A is not matched: it only produces a verification request (EG-01 review, AS-013).
+    """
 
     q: QuestionId
     unresolved: Literal[True]
@@ -322,7 +325,8 @@ class RuleEncoding(_Spec):
     """Hand-coded structure of a prose trigger (tools/encodings/rules.yaml).
 
     The rule *fires* when one of ``cases`` matches. ``gap`` is evaluated on its own
-    and carries the missing/unknown treatment of the workbook.
+    and carries the missing/unknown treatment of the workbook. ``review`` flags manual
+    checks still to do: a non-blocking verification request (AS-013).
     """
 
     kind: EncodingKind
@@ -330,6 +334,7 @@ class RuleEncoding(_Spec):
     cases: list[RuleCase] = []
     gap: Condition | None = None
     gap_effects: list[RuleEffect] = []
+    review: Condition | None = None
     elements: list[RuleElementSpec] = []
     hs_referral: RuleId | None = None
     routes_to: list[RuleId] = []
@@ -339,7 +344,7 @@ class RuleEncoding(_Spec):
 
     @model_validator(mode="after")
     def _shape(self) -> RuleEncoding:
-        if self.kind is EncodingKind.SYSTEM and (self.cases or self.gap):
+        if self.kind is EncodingKind.SYSTEM and (self.cases or self.gap or self.review):
             raise ValueError("SYSTEM rules have no cases or gap")
         if self.kind is not EncodingKind.SYSTEM and not self.cases:
             raise ValueError("non-SYSTEM rules need at least one case")

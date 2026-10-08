@@ -7,7 +7,8 @@
 #
 # Conventions
 # - cases are tried in order, the first match wins; the rule "fires" when one matches.
-# - gap carries the 'Missing/unknown treatment' column.
+# - gap carries the 'Missing/unknown treatment' column (EVIDENCE_GAP effect = material, O4).
+# - review lists manual checks not done yet: a verification request, never blocking (AS-013).
 # - MANUAL elements are the slot a person fills now and the API later. Outside HS-*,
 #   elements are phrased as the deficiency: MET = the deficiency is present (AS-028).
 # - HS-* elements: text, order and count come from the workbook ("... AND ..."); this
@@ -85,6 +86,7 @@ rules:
     cases:
       - when: {flag: VISIBLE_QUESTION_UNRESOLVED}
         effects: [EVIDENCE_GAP]
+    review: {flag: VISIBLE_QUESTION_NOT_APPLICABLE}
     assumptions: [AS-004, AS-013]
 
   QUAL-01:
@@ -107,7 +109,7 @@ rules:
             - {element: QUAL-01.E5, is: [MET]}
             - {element: QUAL-01.E6, is: [MET]}
         effects: [REMEDIATION_REQUIRED]
-    gap:
+    review:
       any:
         - all: [{q: C12, provided: true}, {element: QUAL-01.E1, unresolved: true}]
         - all: [{q: C16, provided: true}, {element: QUAL-01.E2, unresolved: true}]
@@ -115,7 +117,6 @@ rules:
         - all: [{q: C22, provided: true}, {element: QUAL-01.E4, unresolved: true}]
         - all: [{q: C23, provided: true}, {element: QUAL-01.E5, unresolved: true}]
         - all: [{q: C32, provided: true}, {element: QUAL-01.E6, unresolved: true}]
-    gap_effects: [EVIDENCE_GAP]
     assumptions: [AS-013, AS-015, AS-028]
 
   # ------------------------------------------------------------------ scrutiny
@@ -183,11 +184,10 @@ rules:
     cases:
       - when: {element: FRIA-27A.E1, is: [MET]}
         effects: [REMEDIATION_REQUIRED]
-    gap:
-      any:
-        - {q: D01, unresolved: true}
-        - all: [{q: D01, provided: true}, {element: FRIA-27A.E1, unresolved: true}]
+    gap: {q: D01, unresolved: true}
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D01, provided: true}, {element: FRIA-27A.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   FRIA-27B:
@@ -220,8 +220,9 @@ rules:
       any:
         - {q: D04, unresolved: true}
         - {element: FRIA-27D.E1, is: [MET]}
-        - all: [{q: D04, provided: true}, {element: FRIA-27D.E1, unresolved: true}]
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D04, provided: true}, {element: FRIA-27D.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
     note: "Severity 'By RISK-*' (B6): the rule has no severity of its own, each RISK-* is calibrated."
 
@@ -233,11 +234,10 @@ rules:
     cases:
       - when: {element: FRIA-27E.E1, is: [MET]}
         effects: [REMEDIATION_REQUIRED, SCRUTINY]
-    gap:
-      any:
-        - {q: D05, unresolved: true}
-        - all: [{q: D05, provided: true}, {element: FRIA-27E.E1, unresolved: true}]
+    gap: {q: D05, unresolved: true}
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D05, provided: true}, {element: FRIA-27E.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   FRIA-27F:
@@ -248,11 +248,10 @@ rules:
     cases:
       - when: {element: FRIA-27F.E1, is: [MET]}
         effects: [REMEDIATION_REQUIRED, MITIGATION_REQUIRED]
-    gap:
-      any:
-        - {q: D06, unresolved: true}
-        - all: [{q: D06, provided: true}, {element: FRIA-27F.E1, unresolved: true}]
+    gap: {q: D06, unresolved: true}
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D06, provided: true}, {element: FRIA-27F.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   # ------------------------------------------------------------------ hard stops
@@ -627,7 +626,7 @@ rules:
       - when: {flag: MATERIAL_EVIDENCE_GAP}
         effects: [OUTCOME]
     outcome: O4
-    assumptions: [AS-013, AS-027]
+    assumptions: [AS-013]
 
   OUT-03:
     kind: DERIVED
@@ -709,10 +708,11 @@ rules:
         - {q: C14, unresolved: true}
         - {q: C16, unresolved: true}
         - {q: C17, unresolved: true}
-        - all:
-            - any: [{q: C16, provided: true}, {q: C17, provided: true}]
-            - {element: LEGAL-01.E1, unresolved: true}
     gap_effects: [EVIDENCE_GAP, HUMAN_LEGAL_REVIEW]
+    review:
+      all:
+        - any: [{q: C16, provided: true}, {q: C17, provided: true}]
+        - {element: LEGAL-01.E1, unresolved: true}
     assumptions: [AS-013, AS-028]
     note: "C14 = NO does not open HS02 by itself as an O5: HS02 needs all its elements."
 
@@ -738,10 +738,11 @@ rules:
         - {q: C20, unresolved: true}
         - {q: C21, unresolved: true}
         - {q: Q16, unresolved: true}
-        - all:
-            - any: [{q: C18, provided: true}, {q: C19, provided: true}]
-            - {element: DATA-01.E1, unresolved: true}
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all:
+        - any: [{q: C18, provided: true}, {q: C19, provided: true}]
+        - {element: DATA-01.E1, unresolved: true}
     assumptions: [AS-013, AS-028]
 
   DQ-01:
@@ -761,8 +762,9 @@ rules:
         - {q: C41, unresolved: true}
         - {q: C42, unresolved: true}
         - {q: C43, unresolved: true}
-        - all: [{q: C42, provided: true}, {element: DQ-01.E1, unresolved: true}]
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: C42, provided: true}, {element: DQ-01.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
     note: "C43 is a declared rating: HIGH/VERY HIGH raises action; a lower rating never reduces risk without verification."
 
@@ -775,11 +777,10 @@ rules:
       - when:
           any: [{q: C44, is: [NO]}, {element: BIAS-01.E1, is: [MET]}]
         effects: [REMEDIATION_REQUIRED, SCRUTINY, RISK_INPUT]
-    gap:
-      any:
-        - {q: C44, unresolved: true}
-        - all: [{q: C44, provided: true}, {element: BIAS-01.E1, unresolved: true}]
+    gap: {q: C44, unresolved: true}
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: C44, provided: true}, {element: BIAS-01.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   TRANS-01:
@@ -795,8 +796,9 @@ rules:
       any:
         - {q: C28, unresolved: true}
         - {q: C29, unresolved: true}
-        - all: [{q: C29, provided: true}, {element: TRANS-01.E1, unresolved: true}]
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: C29, provided: true}, {element: TRANS-01.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   REM-01:
@@ -818,8 +820,9 @@ rules:
         - {q: C51, unresolved: true}
         - {q: C52, unresolved: true}
         - {q: C53, unresolved: true}
-        - all: [{q: C52, provided: true}, {element: REM-01.E1, unresolved: true}]
     gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: C52, provided: true}, {element: REM-01.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
 
   # ------------------------------------------------------------------ proportionality
@@ -862,9 +865,11 @@ rules:
           any: [{q: N02, is: [NO]}, {element: PROP-02.E1, is: [MET]}]
         effects: [REMEDIATION_REQUIRED, SCRUTINY]
         status: NOT_DEMONSTRATED
-      - when:
-          any: [{q: N02, unresolved: true}, {element: PROP-02.E1, unresolved: true}]
+      - when: {q: N02, unresolved: true}
         effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when: {element: PROP-02.E1, unresolved: true}
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
       - when:
           all: [{q: N02, is: [YES]}, {element: PROP-02.E1, is: [NOT_MET]}]
@@ -885,7 +890,7 @@ rules:
         effects: [REMEDIATION_REQUIRED, HUMAN_LEGAL_REVIEW]
         status: NOT_DEMONSTRATED
       - when: {element: PROP-03.E1, unresolved: true}
-        effects: [EVIDENCE_GAP]
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
       - when: {element: PROP-03.E1, is: [NOT_MET]}
         status: SUPPORTED
@@ -903,8 +908,11 @@ rules:
         effects: [REMEDIATION_REQUIRED]
         status: REMEDIATION_REQUIRED
       - when:
-          any: [{q: C20, unresolved: true}, {q: Q16, unresolved: true}, {element: PROP-04.E1, unresolved: true}]
+          any: [{q: C20, unresolved: true}, {q: Q16, unresolved: true}]
         effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when: {element: PROP-04.E1, unresolved: true}
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
       - when:
           all: [{q: C20, is: [YES]}, {q: Q16, is: [YES]}, {element: PROP-04.E1, is: [NOT_MET]}]
@@ -928,7 +936,7 @@ rules:
         status: NOT_DEMONSTRATED
       - when:
           any: [{element: PROP-05.E1, unresolved: true}, {element: PROP-05.E2, unresolved: true}]
-        effects: [EVIDENCE_GAP]
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
       - when:
           all: [{element: PROP-05.E1, is: [NOT_MET]}, {element: PROP-05.E2, is: [NOT_MET]}]
@@ -957,11 +965,16 @@ rules:
       - when:
           all:
             - *safeguard_relied_on
+            - {element: PROP-06.E1, is: [MET]}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
+          all:
+            - *safeguard_relied_on
             - any:
-                - {element: PROP-06.E1, is: [MET]}
                 - {element: PROP-06.E1, unresolved: true}
                 - {element: PROP-06.E2, unresolved: true}
-        effects: [EVIDENCE_GAP]
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
       - when:
           all:
@@ -1034,7 +1047,7 @@ rules:
                 - {element: PROP-09.E3, unresolved: true}
                 - {element: PROP-09.E4, unresolved: true}
                 - {element: PROP-09.E5, unresolved: true}
-        effects: [EVIDENCE_GAP]
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
     hs_referral: HS08
     assumptions: [AS-025]
@@ -1059,9 +1072,11 @@ rules:
       - when: {element: PROP-10.E1, is: [MET]}
         effects: [SCRUTINY]
         status: SUPPORTED
-      - when:
-          any: [{q: C40, unresolved: true}, {element: PROP-10.E1, unresolved: true}]
+      - when: {q: C40, unresolved: true}
         effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when: {element: PROP-10.E1, unresolved: true}
+        effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
     hs_referral: HS09
     assumptions: [AS-013, AS-026, AS-028]

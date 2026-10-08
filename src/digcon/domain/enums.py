@@ -35,7 +35,8 @@ class AnswerState(_Closed):
     NOT_OWNED = "NOT_OWNED"
 
 
-#: States that never mean NO: they produce an evidence gap or a verification request.
+#: States that never mean NO: they produce an evidence gap (UNKNOWN, NOT_OWNED) or a
+#: verification request (N_A) — AS-013.
 UNRESOLVED_STATES: frozenset[AnswerState] = frozenset(
     {AnswerState.UNKNOWN, AnswerState.N_A, AnswerState.NOT_OWNED}
 )
@@ -294,6 +295,7 @@ class EngineFlag(_Closed):
     """Aggregate engine states computed over all rule results (definitions: AS-013, AS-016, AS-022, AS-023)."""
 
     VISIBLE_QUESTION_UNRESOLVED = "VISIBLE_QUESTION_UNRESOLVED"
+    VISIBLE_QUESTION_NOT_APPLICABLE = "VISIBLE_QUESTION_NOT_APPLICABLE"
     REMEDIATION_TRIGGERED = "REMEDIATION_TRIGGERED"
     HS_MET = "HS_MET"
     MATERIAL_EVIDENCE_GAP = "MATERIAL_EVIDENCE_GAP"

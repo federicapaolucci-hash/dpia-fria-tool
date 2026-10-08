@@ -235,6 +235,7 @@ class _Validator:
                 if r.id in PROP_WITH_STATUS and case.status is None:
                     self.add("ERROR", "ENCODING", r.id, f"case {i}: PROP rule case without status")
             self.check_condition(enc.gap, r.id, "gap")
+            self.check_condition(enc.review, r.id, "review")
             effects = {e for c in enc.cases for e in c.effects}
             for target in (*enc.routes_to, *([enc.hs_referral] if enc.hs_referral else [])):
                 self.ref(target, r.id, "routing")
@@ -403,7 +404,7 @@ class _Validator:
         deps: dict[str, set[str]] = {}
         for r in self.b.rules.rules:
             refs: set[str] = set()
-            conds = [c.when for c in r.encoding.cases] + [r.encoding.gap]
+            conds = [c.when for c in r.encoding.cases] + [r.encoding.gap, r.encoding.review]
             for node in (n for c in conds for n in iter_conditions(c)):
                 if isinstance(node, RuleFired):
                     refs.add(node.rule)
