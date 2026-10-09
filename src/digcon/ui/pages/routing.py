@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pandas as pd
 import streamlit as st
 
 from digcon.domain.models import ConfigBundle
@@ -35,15 +34,16 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
     )
     routing_box(result)
     active = _active_route(result)
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {"Current": "yes" if i == active else "", "Condition": cond, "Path": path}
-                for i, (cond, path) in enumerate(ROUTES)
-            ]
-        ),
-        width="stretch",
-        hide_index=True,
-    )
-    if active is None and not result.routing_suspended:
+    with st.container(border=True):
+        st.subheader("The four possible routes")
+        for i, (cond, path) in enumerate(ROUTES):
+            if i == active:
+                with st.container(key="route_active"):
+                    st.markdown(f":blue-badge[:material/arrow_forward: Your route] **{cond}**")
+                    st.markdown(path)
+            else:
+                st.markdown(f":gray[{cond} → {path}]")
+    if result.routing_suspended:
+        st.caption("No route applies while the add-ons are suspended (C03 = YES).")
+    elif active is None:
         st.caption("No route yet: answer HIGH RISK (1.2) and the role C05 (1.1). UNKNOWN opens nothing and is an evidence gap.")

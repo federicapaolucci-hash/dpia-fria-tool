@@ -77,6 +77,9 @@ hr.digcon-rule { border: none; border-top: 1px solid #E4E9F0; margin: 0.9rem 0 0
 }
 [data-testid="stButtonGroup"] button[data-selected="true"]:not(:disabled) p { color: #FFFFFF !important; }
 
+/* Routing: the active route */
+.st-key-route_active { background: #E8EFFC; border: 1px solid #B9CCF5; border-radius: 8px; padding: 0.6rem 0.8rem; }
+
 /* Outcome banner */
 .digcon-outcome { border-radius: 8px; padding: 1.1rem 1.25rem; margin: 0.2rem 0 0.6rem 0; }
 .digcon-outcome .ttl { font-size: 1.45rem; font-weight: 650; margin: 0.15rem 0 0.35rem 0; }

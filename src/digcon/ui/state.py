@@ -44,12 +44,18 @@ def seed(key: str, default: Any) -> None:
         st.session_state[key] = default
 
 
-def replace(data: dict[str, Any]) -> None:
-    """Load a whole assessment (resume from JSON) and reset every widget."""
+def replace(data: dict[str, Any], *, from_file: bool = True) -> None:
+    """Load a whole assessment (resume from JSON) and reset every widget.
+
+    ``from_file``: the data matches a file the user holds (upload, or a fresh start), so it counts as saved.
+    """
     st.session_state[STORE] = AssessmentState.model_validate(data).model_dump(mode="json")
     for key in [k for k in st.session_state if str(k).startswith(WIDGET_PREFIX)]:
         del st.session_state[key]
-    mark_saved()
+    if from_file:
+        mark_saved()
+    else:
+        st.session_state.pop(SAVED, None)
 
 
 def to_json() -> str:

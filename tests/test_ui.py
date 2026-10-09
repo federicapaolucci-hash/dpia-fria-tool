@@ -120,8 +120,8 @@ def test_widget_answer_updates_outcome_and_opens_hard_stop():
     assert outcome(at) == "O4"  # HS05 opened by the signal, not evaluated yet
     # The lawyer excludes HS05 from the UI.
     goto(at, REVIEW_TITLE)
-    at.selectbox(key="w.HS05.E1").set_value("MET").run()
-    at.selectbox(key="w.HS05.E2").set_value("NOT_MET").run()
+    at.button_group(key="w.HS05.E1").set_value("MET").run()
+    at.button_group(key="w.HS05.E2").set_value("NOT_MET").run()
     at.checkbox(key="w.gate.HS05").check().run()
     at.text_input(key="w.gate.HS05.decision").input("Oversight can be introduced").run()
     at.text_input(key="w.gate.HS05.by").input("F. Paolucci").run()
@@ -188,7 +188,7 @@ def test_complete_assessment_per_role_from_the_ui(role, extra):
         at.selectbox(key="w.D10").set_value("DONE").run()
         goto(at, RULES_TITLE)
         for el in ("FRIA-27A.E1", "FRIA-27D.E1", "FRIA-27E.E1", "FRIA-27F.E1", "FRIA-27I.E1"):
-            at.selectbox(key=f"w.{el}").set_value("NOT_MET").run()
+            at.button_group(key=f"w.{el}").set_value("NOT_MET").run()
     no_errors(at)
     assert outcome(at) == "O1"
     audit = [e for e in at.expander if e.label.startswith("Audit trail")]

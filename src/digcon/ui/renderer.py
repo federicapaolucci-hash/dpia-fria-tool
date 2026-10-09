@@ -157,9 +157,11 @@ def element(spec: RuleElementSpec, effective: str | None = None) -> None:
     stored = state.store()["elements"].get(spec.id)
     state.seed(k, stored["state"] if stored else None)
     tags = " · ".join(t for t, on in (("legal judgement", spec.legal_judgement), ("non-remediability", spec.non_remediability)) if on)
-    st.selectbox(f"`{spec.id}` {spec.text}" + (f"  _({tags})_" if tags else ""), ELEMENT_STATES, key=k,
-                 placeholder="Not evaluated", format_func=lambda c: c.replace("_", " "),
-                 on_change=_sync_element, args=(spec.id,))
+    st.segmented_control(
+        f"`{spec.id}` {spec.text}" + (f"  _({tags})_" if tags else ""), ELEMENT_STATES, key=k,
+        format_func=lambda c: c.replace("_", " "), on_change=_sync_element, args=(spec.id,),
+        help="Not evaluated until you choose. Click the chosen state again to clear it.",
+    )
 
 
 def _sync_gate(rule_id: str) -> None:

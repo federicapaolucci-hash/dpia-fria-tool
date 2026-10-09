@@ -17,7 +17,7 @@ from digcon.config import default_config
 from digcon.domain.enums import Phase
 from digcon.engine import EngineResult, InvalidAssessment, RunContext, run_engine
 
-from . import state
+from . import bridge, state
 from .labels import (
     APP_CAPTION,
     APP_TITLE,
@@ -46,6 +46,7 @@ from .pages import mitigation, questionnaire, result, review, risks, routing, se
 from .style import CSS, OUTCOME_COLOUR
 
 NAV = state.NAV
+RESTORED = "restored_from_browser"
 SIDEBAR_WIDTH = 368  # px: section labels and their status on one line
 
 
@@ -129,12 +130,12 @@ def _progress(cfg, res: EngineResult | None) -> tuple[dict[str, str], dict[str, 
 
 def _save_block(cfg) -> None:
     status = state.save_status(cfg)
-    if status == "unsaved":
-        st.markdown(":orange[:material/error: **Unsaved changes**]  \n:gray[Download the file to keep them.]")
-    elif status == "saved":
-        st.markdown(":green[:material/check_circle: **Saved to file**]  \n:gray[Matches your last download or upload.]")
-    else:
+    if status == "empty":
         st.markdown(":gray[:material/draft: **Nothing entered yet**]")
+    else:
+        file_note = ("Matches your last downloaded file." if status == "saved"
+                     else "Download a file to keep a copy outside this browser.")
+        st.markdown(f":green[:material/history: **Autosaved in this browser**]  \n:gray[{file_note}]")
     start.save_button("rail", width="stretch")
 
 
@@ -200,6 +201,16 @@ def main() -> None:
 
     cfg = _config()
     state.init(cfg)
+    stored = bridge.sync(None if state.save_status(cfg) == "empty" else state.to_json(), st.session_state.get(NAV) or START_TITLE)
+    if stored and state.save_status(cfg) == "empty":
+        try:
+            state.replace(state.parse_upload(stored.encode("utf-8")), from_file=False)
+            st.session_state[RESTORED] = True
+            st.rerun()
+        except ValueError:
+            pass  # an unreadable browser copy is ignored; it is overwritten by the next answer
+    if st.session_state.pop(RESTORED, False):
+        st.toast("Answers restored from this browser's autosave.", icon=":material/history:")
     try:
         res = run_engine(
             cfg,

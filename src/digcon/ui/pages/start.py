@@ -35,11 +35,13 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         "Work through the four steps in the left menu, in order: first the **core**, then the **add-ons** the "
         "scoping opens, then the **transversal modules**, then the **outcome**."
     )
-    st.warning(
-        "Answers are kept only in this browser session and are **lost if you reload or close the page**. "
-        "Save progress as a JSON file to resume later: no copy is kept for you.",
-        icon=":material/save:",
-    )
+    with st.container(border=True):
+        st.markdown(
+            ":blue[:material/history:] Answers are **autosaved in this browser** as you go, so a reload or a closed "
+            "tab loses nothing. Nothing is stored on a server. To continue on another browser or computer, or to "
+            "keep a record, download the JSON file. On a shared computer, use *Discard answers and start over* "
+            "when you finish."
+        )
     col_new, col_resume = st.columns(2, gap="medium")
     with col_new, st.container(border=True):
         st.subheader("New assessment")
@@ -47,7 +49,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         st.text_input("Assessment name", key="w.meta.id", on_change=_sync_id,
                       help="Used as the file name when you save progress.")
         if st.button("Discard answers and start over", icon=":material/restart_alt:",
-                     help="Removes every answer in this session. Save progress first if you may need them."):
+                     help="Removes every answer, including the copy autosaved in this browser. Download a file first if you may need them."):
             state.replace(state.empty_store(cfg))
             st.rerun()
     with col_resume, st.container(border=True):
