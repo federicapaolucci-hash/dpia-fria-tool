@@ -119,13 +119,17 @@ def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
         is_list = q.kind in (AnswerKind.MULTI, AnswerKind.RISK_ROWS)
         value = stored.get("value")
         state.seed(f"{k}.value", (value if isinstance(value, list) else []) if is_list else (value or ""))
-        disabled = st.session_state[f"{k}.status"] is not None
+        status = st.session_state[f"{k}.status"]
+        disabled = status is not None
+        locked = f"Marked as {label_of(status, names)}: click {label_of(status, names)} again to answer." if disabled else ""
         if is_list:
             st.pills(title, _value_codes(cfg, q), selection_mode="multi", key=f"{k}.value", disabled=disabled, wrap=True,
                      label_visibility=hidden, format_func=lambda c: _label(c, names), on_change=on_change, args=args)
         else:
             st.text_area(title, key=f"{k}.value", disabled=disabled, height=80, label_visibility=hidden,
-                         placeholder="Type the answer, or mark it below", on_change=on_change, args=args)
+                         placeholder=locked or "Type the answer, or mark it below", on_change=on_change, args=args)
+        if disabled:
+            st.caption(f":material/lock: {locked}")
         st.segmented_control("Or mark it as", [s.value for s in q.states], key=f"{k}.status",
                              format_func=lambda c: label_of(c, names), on_change=on_change, args=args)
         return
