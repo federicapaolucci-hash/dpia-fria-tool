@@ -41,7 +41,7 @@ The assessment succeeds when a participant reaches a defensible recommended outc
 - **The engine is pure and deterministic.** Outcome precedence is O5 → O4 → O3 → O2 → O1. O5 can only come from hard stops whose constituent elements are fully MET. Only mitigations marked "verified effective" lower residual risk.
 - **Every closed question offers Unknown, N/A and Not owned** wherever its answer model allows them.
 - **Out of scope for now:** LLM/API interpretation (there is only a stub slot in `interpret/`), a database, a human-gate workflow (it is a manually filled field), and batch runs.
-- **Delivery deadline:** 12 October 2026, with the same look as the current app. After that delivery the visual design may be fully redesigned. Copy, credits and disclaimer stay.
+- **Delivery deadline:** 12 October 2026. The visual redesign was brought forward and ships before that delivery (decided 2026-10-09). Copy, credits and disclaimer stay.
 - **Language:** code, identifiers and UI text are in English.
 - **The repo is public.** Nothing from the private specification folder goes into it.
 
