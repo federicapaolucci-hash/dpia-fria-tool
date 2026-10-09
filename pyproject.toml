@@ -1,0 +1,9 @@
+[project]
+name = "digcon"
+version = "0.1.0"
+description = "DIGCON T17 decision engine: DPIA-based fundamental rights assessment"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", ".", "tests"]
+testpaths = ["tests"]

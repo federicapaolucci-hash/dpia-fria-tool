@@ -1,0 +1,22 @@
+# Validator findings already registered in spec/ANOMALIE.md (section A).
+# They are printed as KNOWN and do not block the export. Anything else that is an
+# ERROR blocks it. The workbook is frozen: these are fixed by decision, not by editing it.
+
+- {code: NOT-CITED, subject: HS04, ref: A3}
+- {code: CITE-ONE-WAY, subject: HS04, contains: N01, ref: A3}
+- {code: CITE-ONE-WAY, subject: HS04, contains: N02, ref: A3}
+- {code: CITE-ONE-WAY, subject: HS04, contains: D01, ref: A3}
+- {code: CITE-ONE-WAY, subject: QUAL-01, contains: C31, ref: A5}
+- {code: MIT-TIMING, subject: MIT-035, ref: A7}
+- {code: MIT-TIMING, subject: MIT-046, ref: A7}
+- {code: CITE-ONE-WAY, subject: HS01, contains: N01, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS02, contains: C16, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS05, contains: D05, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS08, contains: C34, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS08, contains: P03, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS08, contains: D04, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS08, contains: D06, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS09, contains: C40, ref: A8}
+- {code: CITE-ONE-WAY, subject: HS09, contains: D03, ref: A8}
+- {code: REF-QUESTION, subject: PROP-06, contains: C45, ref: A10}
+- {code: REF-QUESTION, subject: PROP-06, contains: C49, ref: A10}
