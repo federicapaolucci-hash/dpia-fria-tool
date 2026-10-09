@@ -1,0 +1,945 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T00:00:00Z",
+  "title": "Design System: DIGCON Fundamental Rights Assessment",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Assessment Blue",
+        "canonical": "#1F5EDB",
+        "oklch": "oklch(52.2% 0.202 262.0)",
+        "tonalRamp": [
+          "#000729",
+          "#001C5D",
+          "#043594",
+          "#1151CD",
+          "#3474F3",
+          "#679CFF",
+          "#A5C5FE",
+          "#E6EFFF"
+        ]
+      },
+      "selection": {
+        "role": "primary",
+        "displayName": "Selection Wash",
+        "canonical": "#CFE0FF",
+        "oklch": "oklch(90.4% 0.046 262.5)",
+        "tonalRamp": [
+          "#030A1E",
+          "#18243A",
+          "#324059",
+          "#505E78",
+          "#6F7E9A",
+          "#8F9FBC",
+          "#B4C5E3",
+          "#E6EFFE"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#F4F6FA",
+        "oklch": "oklch(97.3% 0.006 264.5)",
+        "tonalRamp": [
+          "#0A0B0E",
+          "#232427",
+          "#3E4043",
+          "#5C5E61",
+          "#7B7D81",
+          "#9D9EA2",
+          "#C2C4C8",
+          "#ECEEF2"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#7D7D7D",
+          "#9E9E9E",
+          "#C4C4C4",
+          "#EEEEEE"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#18202F",
+        "oklch": "oklch(24.3% 0.031 262.6)",
+        "tonalRamp": [
+          "#050B18",
+          "#1C2433",
+          "#374051",
+          "#545E70",
+          "#737E90",
+          "#949FB2",
+          "#B9C5D9",
+          "#E6EFFE"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#3A4456",
+        "oklch": "oklch(38.5% 0.034 262.1)",
+        "tonalRamp": [
+          "#040B19",
+          "#1B2434",
+          "#364052",
+          "#535E71",
+          "#737E92",
+          "#939FB4",
+          "#B8C5DB",
+          "#E6EFFF"
+        ]
+      },
+      "slate": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#5B6576",
+        "oklch": "oklch(50.4% 0.030 261.1)",
+        "tonalRamp": [
+          "#050B18",
+          "#1C2433",
+          "#374050",
+          "#545E6F",
+          "#737E8F",
+          "#949FB2",
+          "#B9C5D8",
+          "#E6EFFF"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "#D5DCE6",
+        "oklch": "oklch(89.2% 0.016 257.2)",
+        "tonalRamp": [
+          "#070B12",
+          "#1F242C",
+          "#3B4048",
+          "#585E67",
+          "#777E87",
+          "#989FA8",
+          "#BEC5CE",
+          "#E8EFF9"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E4E9F0",
+        "oklch": "oklch(93.2% 0.011 256.7)",
+        "tonalRamp": [
+          "#080B10",
+          "#212429",
+          "#3C4046",
+          "#5A5E64",
+          "#797E84",
+          "#9A9FA5",
+          "#C0C4CB",
+          "#EAEFF6"
+        ]
+      },
+      "table-border": {
+        "role": "neutral",
+        "displayName": "Table Border",
+        "canonical": "#E1E6EE",
+        "oklch": "oklch(92.3% 0.012 259.8)",
+        "tonalRamp": [
+          "#080B10",
+          "#21242A",
+          "#3C4046",
+          "#5A5E65",
+          "#797E85",
+          "#9A9FA6",
+          "#C0C4CC",
+          "#EAEFF7"
+        ]
+      },
+      "code-ground": {
+        "role": "neutral",
+        "displayName": "Code Ground",
+        "canonical": "#EEF1F6",
+        "oklch": "oklch(95.7% 0.007 260.7)",
+        "tonalRamp": [
+          "#090B0E",
+          "#222428",
+          "#3D4044",
+          "#5B5E62",
+          "#7B7D82",
+          "#9C9EA3",
+          "#C1C4C9",
+          "#ECEFF4"
+        ]
+      },
+      "code-ink": {
+        "role": "neutral",
+        "displayName": "Code Ink",
+        "canonical": "#4A5568",
+        "oklch": "oklch(44.7% 0.034 261.3)",
+        "tonalRamp": [
+          "#040B19",
+          "#1B2435",
+          "#364052",
+          "#535E71",
+          "#727E92",
+          "#939FB4",
+          "#B8C5DB",
+          "#E6EFFE"
+        ]
+      },
+      "rail": {
+        "role": "secondary",
+        "displayName": "Rail Navy",
+        "canonical": "#0F1B33",
+        "oklch": "oklch(22.5% 0.050 262.9)",
+        "tonalRamp": [
+          "#020920",
+          "#17233C",
+          "#32405A",
+          "#4F5E7A",
+          "#6E7E9C",
+          "#8E9FBE",
+          "#B3C5E5",
+          "#E6EFFF"
+        ]
+      },
+      "rail-raised": {
+        "role": "secondary",
+        "displayName": "Rail Raised",
+        "canonical": "#1A2945",
+        "oklch": "oklch(28.3% 0.056 262.0)",
+        "tonalRamp": [
+          "#010922",
+          "#15233F",
+          "#2F405D",
+          "#4C5E7D",
+          "#6B7E9F",
+          "#8C9FC2",
+          "#B1C5E9",
+          "#E6EFFF"
+        ]
+      },
+      "rail-card": {
+        "role": "secondary",
+        "displayName": "Rail Card",
+        "canonical": "#16243F",
+        "oklch": "oklch(26.3% 0.054 262.5)",
+        "tonalRamp": [
+          "#020922",
+          "#15233E",
+          "#30405D",
+          "#4D5E7D",
+          "#6C7E9E",
+          "#8C9FC1",
+          "#B1C5E8",
+          "#E6EFFE"
+        ]
+      },
+      "rail-hover": {
+        "role": "secondary",
+        "displayName": "Rail Hover",
+        "canonical": "#1F3052",
+        "oklch": "oklch(31.3% 0.065 263.0)",
+        "tonalRamp": [
+          "#010826",
+          "#132343",
+          "#2D3F62",
+          "#4A5D83",
+          "#697DA5",
+          "#899FC8",
+          "#AEC5EF",
+          "#E6EFFF"
+        ]
+      },
+      "rail-active": {
+        "role": "secondary",
+        "displayName": "Rail Active",
+        "canonical": "#24406F",
+        "oklch": "oklch(37.5% 0.088 260.2)",
+        "tonalRamp": [
+          "#000826",
+          "#07214E",
+          "#233F6E",
+          "#405D8F",
+          "#5E7EB2",
+          "#7F9FD5",
+          "#A3C5FE",
+          "#E6EFFF"
+        ]
+      },
+      "rail-border": {
+        "role": "secondary",
+        "displayName": "Rail Border",
+        "canonical": "#2A3B5C",
+        "oklch": "oklch(35.4% 0.062 262.8)",
+        "tonalRamp": [
+          "#010825",
+          "#132342",
+          "#2E3F61",
+          "#4B5E81",
+          "#6A7DA3",
+          "#8A9FC6",
+          "#AFC5ED",
+          "#E6EFFF"
+        ]
+      },
+      "rail-button-border": {
+        "role": "secondary",
+        "displayName": "Rail Button Border",
+        "canonical": "#3A5383",
+        "oklch": "oklch(44.5% 0.085 262.5)",
+        "tonalRamp": [
+          "#00062B",
+          "#0C214C",
+          "#273E6C",
+          "#435D8E",
+          "#627DB0",
+          "#829FD4",
+          "#A7C5FC",
+          "#E6EFFF"
+        ]
+      },
+      "rail-ink": {
+        "role": "secondary",
+        "displayName": "Rail Ink",
+        "canonical": "#E3E8F1",
+        "oklch": "oklch(93.0% 0.013 262.4)",
+        "tonalRamp": [
+          "#080B11",
+          "#21242B",
+          "#3C4047",
+          "#5A5E65",
+          "#797D85",
+          "#9A9FA7",
+          "#BFC4CD",
+          "#EAEFF8"
+        ]
+      },
+      "rail-nav-ink": {
+        "role": "secondary",
+        "displayName": "Rail Nav Ink",
+        "canonical": "#D7DEEA",
+        "oklch": "oklch(89.9% 0.018 261.3)",
+        "tonalRamp": [
+          "#070B13",
+          "#1F242D",
+          "#3A404A",
+          "#585E68",
+          "#777E88",
+          "#989FAA",
+          "#BEC4D0",
+          "#E8EFFB"
+        ]
+      },
+      "rail-muted": {
+        "role": "secondary",
+        "displayName": "Rail Muted",
+        "canonical": "#9AA7BD",
+        "oklch": "oklch(72.5% 0.035 261.0)",
+        "tonalRamp": [
+          "#040B1A",
+          "#1A2435",
+          "#354053",
+          "#525E72",
+          "#727E93",
+          "#929FB5",
+          "#B7C5DC",
+          "#E6EFFF"
+        ]
+      },
+      "rail-accent": {
+        "role": "secondary",
+        "displayName": "Rail Accent",
+        "canonical": "#4C8DFF",
+        "oklch": "oklch(65.8% 0.182 260.7)",
+        "tonalRamp": [
+          "#000826",
+          "#001E57",
+          "#013790",
+          "#1555C2",
+          "#3877E7",
+          "#649CFE",
+          "#A3C5FE",
+          "#E6EFFF"
+        ]
+      },
+      "rail-focus": {
+        "role": "secondary",
+        "displayName": "Rail Focus",
+        "canonical": "#7FAEFF",
+        "oklch": "oklch(75.1% 0.128 260.8)",
+        "tonalRamp": [
+          "#000826",
+          "#001E58",
+          "#133B82",
+          "#315BA5",
+          "#507CC9",
+          "#709EEE",
+          "#A3C5FF",
+          "#E6EFFF"
+        ]
+      },
+      "outcome-o1": {
+        "role": "tertiary",
+        "displayName": "O1 Proceed Green",
+        "canonical": "#1F7A4D",
+        "oklch": "oklch(51.5% 0.110 156.8)",
+        "tonalRamp": [
+          "#000F06",
+          "#022C18",
+          "#064D2D",
+          "#0D6F43",
+          "#3A9162",
+          "#5EB382",
+          "#85DAA7",
+          "#C5FFDA"
+        ]
+      },
+      "outcome-o1-tint": {
+        "role": "tertiary",
+        "displayName": "O1 Proceed Green Tint",
+        "canonical": "#E8F4EE",
+        "oklch": "oklch(95.7% 0.015 164.7)",
+        "tonalRamp": [
+          "#060D0A",
+          "#1D2622",
+          "#39423E",
+          "#56605B",
+          "#75807B",
+          "#96A19C",
+          "#BCC7C2",
+          "#E6F2EC"
+        ]
+      },
+      "outcome-o1-ink": {
+        "role": "tertiary",
+        "displayName": "O1 Proceed Green Ink",
+        "canonical": "#14532D",
+        "oklch": "oklch(39.3% 0.090 152.5)",
+        "tonalRamp": [
+          "#001004",
+          "#012D13",
+          "#0B4D27",
+          "#306C44",
+          "#518D63",
+          "#72AF83",
+          "#97D5A8",
+          "#C6FFD5"
+        ]
+      },
+      "outcome-o2-tint": {
+        "role": "tertiary",
+        "displayName": "O2 Conditions Blue Tint",
+        "canonical": "#E8EFFC",
+        "oklch": "oklch(95.1% 0.019 263.0)",
+        "tonalRamp": [
+          "#070B13",
+          "#1F242D",
+          "#3A404A",
+          "#585E69",
+          "#777D89",
+          "#989FAB",
+          "#BEC4D1",
+          "#E8EFFC"
+        ]
+      },
+      "outcome-o2-ink": {
+        "role": "tertiary",
+        "displayName": "O2 Conditions Blue Ink",
+        "canonical": "#173F95",
+        "oklch": "oklch(39.7% 0.149 262.8)",
+        "tonalRamp": [
+          "#00062A",
+          "#001A60",
+          "#10378C",
+          "#2D58B0",
+          "#4C79D5",
+          "#6C9CFA",
+          "#A6C4FF",
+          "#E6EFFF"
+        ]
+      },
+      "outcome-o3": {
+        "role": "tertiary",
+        "displayName": "O3 Revision Orange",
+        "canonical": "#B45309",
+        "oklch": "oklch(55.5% 0.146 49.0)",
+        "tonalRamp": [
+          "#180500",
+          "#3D1801",
+          "#672D03",
+          "#934308",
+          "#C05E1C",
+          "#E58044",
+          "#FDAF86",
+          "#FEEADF"
+        ]
+      },
+      "outcome-o3-tint": {
+        "role": "tertiary",
+        "displayName": "O3 Revision Orange Tint",
+        "canonical": "#FDF0E1",
+        "oklch": "oklch(96.1% 0.024 71.5)",
+        "tonalRamp": [
+          "#120902",
+          "#2C2217",
+          "#483E32",
+          "#675C4F",
+          "#877B6E",
+          "#A89C8E",
+          "#CEC2B3",
+          "#F9ECDD"
+        ]
+      },
+      "outcome-o3-ink": {
+        "role": "tertiary",
+        "displayName": "O3 Revision Orange Ink",
+        "canonical": "#7C3A06",
+        "oklch": "oklch(42.8% 0.108 50.9)",
+        "tonalRamp": [
+          "#180600",
+          "#3D1800",
+          "#652E05",
+          "#8C491B",
+          "#B0693D",
+          "#D48A5E",
+          "#FDB083",
+          "#FEEADF"
+        ]
+      },
+      "outcome-o4": {
+        "role": "tertiary",
+        "displayName": "O4 Evidence Violet",
+        "canonical": "#6D3FC4",
+        "oklch": "oklch(49.8% 0.196 294.0)",
+        "tonalRamp": [
+          "#0F0029",
+          "#2C0060",
+          "#4C0B99",
+          "#6839BE",
+          "#875DE4",
+          "#A686FB",
+          "#C7B9FC",
+          "#EFECFE"
+        ]
+      },
+      "outcome-o4-tint": {
+        "role": "tertiary",
+        "displayName": "O4 Evidence Violet Tint",
+        "canonical": "#F1EBFB",
+        "oklch": "oklch(94.9% 0.022 302.9)",
+        "tonalRamp": [
+          "#0D0913",
+          "#26212D",
+          "#423D4A",
+          "#605B68",
+          "#807A88",
+          "#A19BAA",
+          "#C7C1D0",
+          "#F1EBFB"
+        ]
+      },
+      "outcome-o4-ink": {
+        "role": "tertiary",
+        "displayName": "O4 Evidence Violet Ink",
+        "canonical": "#4B2A8C",
+        "oklch": "oklch(38.6% 0.153 293.4)",
+        "tonalRamp": [
+          "#0F002A",
+          "#2B045E",
+          "#472587",
+          "#6446AA",
+          "#8368CF",
+          "#A489F4",
+          "#C6B9FD",
+          "#EFECFF"
+        ]
+      },
+      "outcome-o5": {
+        "role": "tertiary",
+        "displayName": "O5 Stop Red",
+        "canonical": "#B42318",
+        "oklch": "oklch(50.0% 0.182 29.5)",
+        "tonalRamp": [
+          "#1F0000",
+          "#4A0201",
+          "#7C0502",
+          "#AD1A10",
+          "#D44536",
+          "#FB6957",
+          "#FDAC9F",
+          "#FFE9E5"
+        ]
+      },
+      "outcome-o5-tint": {
+        "role": "tertiary",
+        "displayName": "O5 Stop Red Tint",
+        "canonical": "#FCEBEA",
+        "oklch": "oklch(95.3% 0.019 21.6)",
+        "tonalRamp": [
+          "#120808",
+          "#2D2120",
+          "#493C3B",
+          "#685A59",
+          "#887978",
+          "#AA9A99",
+          "#D0C0BF",
+          "#FBEAE9"
+        ]
+      },
+      "outcome-o5-ink": {
+        "role": "tertiary",
+        "displayName": "O5 Stop Red Ink",
+        "canonical": "#7F1D16",
+        "oklch": "oklch(39.5% 0.134 28.8)",
+        "tonalRamp": [
+          "#1F0000",
+          "#4A0202",
+          "#77140E",
+          "#9B382E",
+          "#C05A4D",
+          "#E67B6D",
+          "#FEACA0",
+          "#FFE9E5"
+        ]
+      },
+      "risk-very-low": {
+        "role": "tertiary",
+        "displayName": "Risk Very Low",
+        "canonical": "#FFF7EC",
+        "oklch": "oklch(97.9% 0.017 76.1)",
+        "tonalRamp": [
+          "#0F0A04",
+          "#29231B",
+          "#453F36",
+          "#635D53",
+          "#837C72",
+          "#A59D93",
+          "#CBC3B8",
+          "#F5EDE2"
+        ]
+      },
+      "risk-low": {
+        "role": "tertiary",
+        "displayName": "Risk Low",
+        "canonical": "#FEE7C8",
+        "oklch": "oklch(93.9% 0.048 75.3)",
+        "tonalRamp": [
+          "#130900",
+          "#312005",
+          "#4F3C22",
+          "#6E5A3F",
+          "#8E7A5E",
+          "#B09B7E",
+          "#D7C0A2",
+          "#FEEBD2"
+        ]
+      },
+      "risk-moderate": {
+        "role": "tertiary",
+        "displayName": "Risk Moderate",
+        "canonical": "#FBC98E",
+        "oklch": "oklch(86.7% 0.094 70.7)",
+        "tonalRamp": [
+          "#130800",
+          "#351E00",
+          "#593804",
+          "#7F5314",
+          "#A17339",
+          "#C4945A",
+          "#EBBA7F",
+          "#FEEBD5"
+        ]
+      },
+      "risk-high": {
+        "role": "tertiary",
+        "displayName": "Risk High",
+        "canonical": "#F08A3E",
+        "oklch": "oklch(73.1% 0.152 54.0)",
+        "tonalRamp": [
+          "#170600",
+          "#3B1A01",
+          "#633002",
+          "#8F4705",
+          "#BD610A",
+          "#E58033",
+          "#FDB07D",
+          "#FEEADD"
+        ]
+      },
+      "risk-very-high": {
+        "role": "tertiary",
+        "displayName": "Risk Very High",
+        "canonical": "#B5480F",
+        "oklch": "oklch(54.1% 0.154 42.6)",
+        "tonalRamp": [
+          "#1A0400",
+          "#401401",
+          "#6C2703",
+          "#9B3B07",
+          "#C65724",
+          "#EC7A49",
+          "#FDAE8F",
+          "#FFE9E1"
+        ]
+      },
+      "risk-ink-light": {
+        "role": "tertiary",
+        "displayName": "Risk Ink (light cells)",
+        "canonical": "#5A3A12",
+        "oklch": "oklch(37.8% 0.070 68.3)",
+        "tonalRamp": [
+          "#140800",
+          "#361E00",
+          "#58380F",
+          "#78562F",
+          "#99764F",
+          "#BC976F",
+          "#E3BC93",
+          "#FEEBD7"
+        ]
+      },
+      "risk-ink-moderate": {
+        "role": "tertiary",
+        "displayName": "Risk Ink (moderate)",
+        "canonical": "#4A2A06",
+        "oklch": "oklch(31.9% 0.067 63.4)",
+        "tonalRamp": [
+          "#150800",
+          "#371D01",
+          "#583716",
+          "#785534",
+          "#9A7553",
+          "#BD9673",
+          "#E4BB97",
+          "#FFEAD9"
+        ]
+      },
+      "risk-ink-high": {
+        "role": "tertiary",
+        "displayName": "Risk Ink (high)",
+        "canonical": "#3B1A02",
+        "oklch": "oklch(26.1% 0.063 53.2)",
+        "tonalRamp": [
+          "#170600",
+          "#3B1A02",
+          "#5A361E",
+          "#7A543B",
+          "#9B735A",
+          "#BE947A",
+          "#E6BA9F",
+          "#FEEADE"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section heading; the largest text on the canvas."
+      },
+      "outcome-title": {
+        "displayName": "Outcome Title",
+        "purpose": "The line inside the outcome banner."
+      },
+      "app-title": {
+        "displayName": "App Title",
+        "purpose": "Product title in the header, deliberately quiet."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and subsection headings."
+      },
+      "question": {
+        "displayName": "Question",
+        "purpose": "Question text above each answer control."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, capped at 78ch."
+      },
+      "count": {
+        "displayName": "Count",
+        "purpose": "Open-item counter figures, tabular numerals."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Rule references, precedence lines, header caption, disclaimer."
+      },
+      "rail-group": {
+        "displayName": "Rail Group",
+        "purpose": "Uppercase step group headings in the navigation rail only."
+      },
+      "id-code": {
+        "displayName": "ID Code",
+        "purpose": "Question, rule, measure and risk identifiers."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "streamlit-mobile",
+        "value": "640px",
+        "note": "Streamlit's column stacking and rail collapse; no custom breakpoint in the build."
+      }
+    ],
+    "focus": [
+      {
+        "name": "focus-canvas",
+        "value": "outline: 2px solid #1F5EDB; outline-offset: 2px",
+        "purpose": "Buttons, inputs, comboboxes and links on the canvas."
+      },
+      {
+        "name": "focus-rail",
+        "value": "outline: 2px solid #7FAEFF; outline-offset: 1px",
+        "purpose": "Navigation items in the rail."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Forward pager and single confirming actions; trailing arrow for next.",
+      "html": "<button class=\"ds-btn-primary\">4.2 Governance decision <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z\"/></svg></button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; gap:0.5rem; justify-content:center; min-width:16rem; padding:0.5rem 1rem; background:#1F5EDB; color:#FFFFFF; border:1px solid #1F5EDB; border-radius:6px; font:400 15px/1.4 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; cursor:pointer; transition:background .15s; } .ds-btn-primary:hover { filter:brightness(0.92); } .ds-btn-primary:focus-visible { outline:2px solid #1F5EDB; outline-offset:2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Back pager, Methodology popover trigger and lesser actions.",
+      "html": "<button class=\"ds-btn-secondary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z\"/></svg> 3.5 Hard stop gate</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; align-items:center; gap:0.5rem; justify-content:center; min-width:16rem; padding:0.5rem 1rem; background:#FFFFFF; color:#18202F; border:1px solid #D5DCE6; border-radius:6px; font:400 15px/1.4 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; cursor:pointer; transition:border-color .15s, color .15s; } .ds-btn-secondary:hover { border-color:#1F5EDB; color:#1F5EDB; } .ds-btn-secondary:focus-visible { outline:2px solid #1F5EDB; outline-offset:2px; }"
+    },
+    {
+      "name": "Segmented Answer Control",
+      "kind": "input",
+      "refersTo": "segment-selected",
+      "description": "Every closed question: joined segments, the chosen state filled blue.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button>YES</button><button>NO</button><button aria-checked=\"true\" class=\"on\">UNKNOWN</button><button>N/A</button><button>NOT OWNED</button></div>",
+      "css": ".ds-seg { display:inline-flex; font:400 0.85rem/1 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; } .ds-seg button { padding:0.45rem 0.75rem; background:#FFFFFF; color:#18202F; border:1px solid #D5DCE6; margin-left:-1px; cursor:pointer; font:inherit; } .ds-seg button:first-child { border-radius:6px 0 0 6px; margin-left:0; } .ds-seg button:last-child { border-radius:0 6px 6px 0; } .ds-seg button:hover { color:#1F5EDB; } .ds-seg button.on { background:#1F5EDB; border-color:#1F5EDB; color:#FFFFFF; position:relative; } .ds-seg button:focus-visible { outline:2px solid #1F5EDB; outline-offset:2px; position:relative; }"
+    },
+    {
+      "name": "Question Row",
+      "kind": "custom",
+      "refersTo": "id-chip",
+      "description": "Question text with its ID chip, the answer control beneath, the unresolved badge when it applies, a hairline to the next row.",
+      "html": "<div class=\"ds-q\"><p class=\"ds-q-t\">Is there meaningful human oversight?<code>C46</code></p><div class=\"ds-q-c\"><span>YES</span><span>NO</span><span class=\"on\">UNKNOWN</span><span>N/A</span><span>NOT OWNED</span></div><p class=\"ds-q-n\"><span class=\"ds-badge-violet\">Unknown</span> May create an evidence gap. Never read as NO.</p><hr></div>",
+      "css": ".ds-q { font:400 15px/1.5 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; color:#18202F; background:#FFFFFF; padding:0.25rem 1rem; } .ds-q-t { font-weight:600; font-size:0.98rem; line-height:1.4; margin:0.15rem 0 0.4rem; } .ds-q-t code { font:500 0.75rem Consolas, 'SFMono-Regular', Menlo, monospace; background:#EEF1F6; color:#4A5568; padding:0.1rem 0.3rem; border-radius:4px; margin-left:0.35rem; } .ds-q-c { display:inline-flex; font-size:0.85rem; } .ds-q-c span { padding:0.4rem 0.7rem; border:1px solid #D5DCE6; margin-left:-1px; } .ds-q-c span:first-child { border-radius:6px 0 0 6px; } .ds-q-c span:last-child { border-radius:0 6px 6px 0; } .ds-q-c span.on { background:#1F5EDB; border-color:#1F5EDB; color:#FFFFFF; } .ds-q-n { font-size:0.9rem; color:#5B6576; margin:0.5rem 0 0; } .ds-badge-violet { background:rgba(109,63,196,0.12); color:#6D3FC4; border-radius:4px; padding:0.05rem 0.4rem; font-size:0.8rem; } .ds-q hr { border:none; border-top:1px solid #E4E9F0; margin:0.9rem 0 0.7rem; }"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "rail-nav-item",
+      "description": "Navy rail: step group label, progress, one item per section with its status badge; current item filled.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-g\">Step 1 · Core assessment</div><div class=\"ds-rail-p\"><i style=\"width:70%\"></i></div><a href=\"#\">1.2 What <span class=\"b g\">Complete</span></a><a href=\"#\" class=\"cur\">1.3 How <span class=\"b n\">9 / 14</span></a><a href=\"#\">1.4 Why <span class=\"b n\">0 / 25</span></a></nav>",
+      "css": ".ds-rail { background:#0F1B33; padding:1rem; width:300px; font:400 0.92rem/1.3 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; } .ds-rail-g { font-size:0.72rem; font-weight:650; letter-spacing:0.07em; text-transform:uppercase; color:#9AA7BD; margin:0 0 0.4rem 0.75rem; } .ds-rail-p { height:4px; background:#2A3B5C; border-radius:2px; margin:0 0 0.5rem; } .ds-rail-p i { display:block; height:100%; background:#4C8DFF; border-radius:2px; } .ds-rail a { display:flex; align-items:center; gap:0.4rem; min-height:2.15rem; padding:0.3rem 0.75rem; color:#D7DEEA; text-decoration:none; border-radius:6px; } .ds-rail a:hover { background:#1F3052; color:#FFFFFF; } .ds-rail a.cur { background:#24406F; color:#FFFFFF; } .ds-rail a:focus-visible { outline:2px solid #7FAEFF; outline-offset:1px; } .ds-rail .b { font-size:0.8rem; padding:0 0.35rem; border-radius:4px; } .ds-rail .b.g { background:rgba(92,196,142,0.18); color:#5CC48E; } .ds-rail .b.n { background:rgba(154,167,189,0.18); color:#C9D3E3; }"
+    },
+    {
+      "name": "Outcome Banner",
+      "kind": "custom",
+      "refersTo": "outcome-banner-o4",
+      "description": "Leads the results page in the outcome's tint and ink; shown here for O4.",
+      "html": "<div class=\"ds-outcome\"><div class=\"ttl\">Recommended outcome: O4 — Assessment incomplete (evidence gap)</div><p class=\"txt\">Material information needed for a required conclusion is missing or unknown. Complete the assessment.</p></div>",
+      "css": ".ds-outcome { background:#F1EBFB; color:#4B2A8C; border-radius:8px; padding:1.1rem 1.25rem; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; } .ds-outcome .ttl { font-size:1.45rem; font-weight:650; margin:0.15rem 0 0.35rem; } .ds-outcome .txt { font-size:0.95rem; margin:0; max-width:80ch; }"
+    },
+    {
+      "name": "Open-Item Counters",
+      "kind": "card",
+      "refersTo": "counter",
+      "description": "Row of open-item counts; zero tiles recede so open items lead.",
+      "html": "<div class=\"ds-cnts\"><div class=\"c\"><b>3</b>Evidence gaps</div><div class=\"c\"><b>1</b>Open remediations</div><div class=\"c z\"><b>0</b>Conditions</div><div class=\"c\"><b>1</b>Hard stops open</div></div>",
+      "css": ".ds-cnts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.5rem; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; } .ds-cnts .c { background:#FFFFFF; border:1px solid #D5DCE6; border-radius:8px; padding:0.55rem 0.8rem; font-size:0.82rem; color:#3A4456; display:flex; align-items:baseline; gap:0.5rem; } .ds-cnts b { font-size:1.35rem; font-weight:650; color:#18202F; font-variant-numeric:tabular-nums; } .ds-cnts .z, .ds-cnts .z b { color:#5B6576; font-weight:400; }"
+    },
+    {
+      "name": "Risk Matrix",
+      "kind": "custom",
+      "refersTo": "matrix-cell",
+      "description": "Severity by probability tiles on the orange ramp; solid chip = initial, dashed = residual.",
+      "html": "<table class=\"ds-mx\"><tr><th></th><th>RARE</th><th>POSSIBLE</th><th>LIKELY</th></tr><tr><th class=\"r\">HIGH</th><td style=\"background:#FBC98E;color:#4A2A06\"><div class=\"l\">MODERATE</div></td><td style=\"background:#F08A3E;color:#3B1A02\"><div class=\"l\">HIGH</div><span class=\"chip\">RISK-21</span></td><td style=\"background:#B5480F;color:#FFFFFF\"><div class=\"l\">VERY HIGH</div></td></tr><tr><th class=\"r\">MEDIUM</th><td style=\"background:#FEE7C8;color:#5A3A12\"><div class=\"l\">LOW</div><span class=\"chip res\">RISK-21 res.</span></td><td style=\"background:#FBC98E;color:#4A2A06\"><div class=\"l\">MODERATE</div><span class=\"chip\">RISK-08</span></td><td style=\"background:#FBC98E;color:#4A2A06\"><div class=\"l\">MODERATE</div></td></tr></table>",
+      "css": ".ds-mx { border-collapse:separate; border-spacing:4px; width:100%; font:400 0.85rem 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; } .ds-mx th { font-weight:600; color:#5B6576; padding:0.3rem; } .ds-mx th.r { text-align:right; } .ds-mx td { border-radius:6px; padding:0.45rem; vertical-align:top; height:3.4rem; } .ds-mx .l { font-size:0.7rem; font-weight:650; letter-spacing:0.04em; } .ds-mx .chip { display:inline-block; margin:0.2rem 0.2rem 0 0; padding:0.05rem 0.4rem; border-radius:4px; background:#FFFFFF; color:#18202F; font-size:0.75rem; font-weight:600; border:1px solid #18202F; } .ds-mx .chip.res { border-style:dashed; background:transparent; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White bordered container on the canvas; flat.",
+      "html": "<div class=\"ds-card\"><h3>What to do next</h3><p><b>Conditions</b> <span class=\"ds-bb\">1</span> <span class=\"m\">Remain attached to an O2 outcome.</span></p><p><code>OUT-02</code> Condition remains (continuous mitigation)</p></div>",
+      "css": ".ds-card { background:#FFFFFF; border:1px solid #D5DCE6; border-radius:8px; padding:1rem; font:400 15px/1.5 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif; color:#18202F; } .ds-card h3 { font-size:1.12rem; font-weight:600; letter-spacing:-0.01em; margin:0 0 0.6rem; } .ds-card .m { color:#5B6576; } .ds-bb { background:rgba(31,94,219,0.12); color:#1F5EDB; border-radius:4px; padding:0 0.35rem; font-size:0.8rem; } .ds-card code { font:500 0.75rem Consolas, monospace; background:#EEF1F6; color:#4A5568; padding:0.1rem 0.3rem; border-radius:4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Case File Workbench",
+    "overview": "**Creative North Star: \"The Case File Workbench\"**\n\nThe app is a working surface for one long, careful job: filling in a fundamental-rights assessment over several sittings and reaching a recommended outcome that can be traced to its rules. It follows the category standard for governance, risk and privacy assessment platforms. A dark navy rail holds orientation (where am I, how much is left, is my work saved, what is the outcome now). A light, cool canvas holds the work, and white bordered cards group it. Nothing on the canvas performs; every surface either asks a question, states a status or points to the next action.\n\nDensity is high but ordered. Questions run in a single column, each a bold line with its ID in a small grey code chip, the answer control directly beneath, and a hairline rule to the next. Colour carries meaning, not decoration: one blue for action and selection, five outcome hues for the five recommendation levels, one sequential orange ramp for risk intensity, and violet for answers that are still unresolved. The system rejects the default Streamlit page of stacked widgets and raw tables, and it rejects pass/fail verdict styling: no outcome is ever presented as a green tick or a red cross alone.",
+    "keyCharacteristics": [
+      "Navy rail plus light canvas: orientation on the left, work on the right.",
+      "White cards with a 1px cool-grey border and 8px corners, flat, no shadow.",
+      "One action blue; every selected answer fills with it.",
+      "Outcomes O1 to O5 each own a hue and show as tinted banners and badges with a text label.",
+      "Risk intensity on a single light-to-dark orange ramp.",
+      "Unresolved answers (Unknown, Not owned, N/A) always carry a labelled badge, never colour alone.",
+      "IDs (questions, rules, measures, risks) stay visible as small monospace chips."
+    ],
+    "rules": [
+      {
+        "name": "The One Hue Per Outcome Rule",
+        "body": "O1 green, O2 blue, O3 orange, O4 violet, O5 red, always with the outcome code and its title in text. An outcome is a recommendation level, never a pass/fail verdict, so it is never shown as colour alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Ramp Rule",
+        "body": "Risk intensity uses only the orange ramp, light to dark. Do not mix outcome hues into risk cells or use red for \"very high\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Violet Means Unresolved Rule",
+        "body": "Violet marks material that is missing or unknown (O4, Unknown, Not owned). It is never used for decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Section Leads Rule",
+        "body": "The section heading is the largest type on the page; the app title stays a quiet line above it.",
+        "section": "typography"
+      },
+      {
+        "name": "The IDs Stay Visible Rule",
+        "body": "Every question, finding and measure shows its ID in monospace beside its text, because every judgement must point back to a rule or input.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Card Rule",
+        "body": "Cards are separated from the canvas by their white ground and a 1px border, never by a drop shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put new work on Canvas (#F4F6FA) inside white cards with a 1px #D5DCE6 border and 8px corners.",
+      "Do use Assessment Blue (#1F5EDB) for the one primary action per view and for every selected answer.",
+      "Do show outcomes with their code and title in text, in their own hue: O1 green, O2 blue, O3 orange, O4 violet, O5 red.",
+      "Do place risk intensity on the orange ramp only, light (#FFF7EC) to dark (#B5480F).",
+      "Do give every unresolved state (Unknown, Not owned, N/A) a labelled badge and the note that it is never read as NO.",
+      "Do show the ID of every question, rule, measure and risk as a small monospace chip.",
+      "Do keep the rail as the single place for orientation: step, section status, current outcome and save state.",
+      "Do use tabular numerals for counts, metrics and tables."
+    ],
+    "donts": [
+      "Don't style any outcome as a pass/fail verdict (green tick versus red cross); outcomes are recommendation levels.",
+      "Don't use red anywhere except a fully confirmed hard stop and the O5 outcome.",
+      "Don't signal state with colour alone; every badge carries a word.",
+      "Don't add drop shadows to cards; separation is tonal and bordered.",
+      "Don't fall back to the default Streamlit page of stacked widgets and raw tables for results; lead with the outcome, the counters and what to do next.",
+      "Don't add a dark theme, or institutional logos without confirmation; the build is light only and carries no marks."
+    ]
+  }
+}

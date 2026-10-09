@@ -82,7 +82,6 @@ OUTCOME_TEXT = {
     Outcome.O5: "At least one hard stop (HS01–HS09) is fully established and confirmed by legal review. A mitigation plan cannot override it.",
 }
 
-ANSWERED = "ANSWERED"
 
 START_TITLE = "1.0 Start — new or saved assessment"
 ROUTING_TITLE = "2.0 Routing after scoping"

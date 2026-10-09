@@ -10,7 +10,8 @@ from digcon.domain.enums import AnswerKind, ControlEffectiveness, NotificationSt
 from digcon.domain.models import ConfigBundle, QuestionSpec, RuleElementSpec
 
 from . import state
-from .labels import ANSWERED, QUESTION_NOTES
+from .labels import QUESTION_NOTES
+from .style import RULE, question_title
 
 ELEMENT_STATES = [s.value for s in RuleElementState]
 
@@ -53,9 +54,9 @@ def _sync(cfg: ConfigBundle, q: QuestionSpec) -> None:
         if answer and detail:
             answer["detail"] = detail
     elif q.kind in (AnswerKind.TEXT, AnswerKind.REFERENCE, AnswerKind.MULTI, AnswerKind.RISK_ROWS):
-        status = ss.get(f"{k}.status", ANSWERED)
+        status = ss.get(f"{k}.status")  # None = a value is given
         value = ss.get(f"{k}.value")
-        if status != ANSWERED:
+        if status:
             answer = {"question_id": q.id, "state": status}
         elif isinstance(value, str) and value.strip():
             answer = {"question_id": q.id, "value": value.strip()}
@@ -77,55 +78,62 @@ def _sync(cfg: ConfigBundle, q: QuestionSpec) -> None:
     state.set_or_remove("answers", q.id, answer)
 
 
+UNRESOLVED_NOTE = {
+    "UNKNOWN": ":violet-badge[:material/help: Unknown] :gray[May create an evidence gap. Never read as NO.]",
+    "NOT_OWNED": ":violet-badge[:material/person_off: Not owned] :gray[May create an evidence gap. Never read as NO.]",
+    "N_A": ":gray-badge[:material/block: N/A] :gray[May be sent for verification. Never read as NO.]",
+}
+
+
 def question(cfg: ConfigBundle, q: QuestionSpec) -> None:
+    st.markdown(question_title(q.text, q.id), unsafe_allow_html=True, help=f"Rules: {q.rule_refs_text}")
     _question(cfg, q)
+    answer = state.store()["answers"].get(q.id) or {}
+    if answer.get("state") in UNRESOLVED_NOTE:
+        st.markdown(UNRESOLVED_NOTE[answer["state"]])
     if q.id in QUESTION_NOTES:
         st.caption(QUESTION_NOTES[q.id])
+    st.markdown(RULE, unsafe_allow_html=True)
 
 
 def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
     stored = state.store()["answers"].get(q.id) or {}
     k = f"w.{q.id}"
     names = _option_names(cfg, q)
-    help_ = f"{q.id} · rules: {q.rule_refs_text}"
-    title = f"{q.text} `{q.id}`"
+    title = q.text  # visible title is drawn above; the widget keeps it as its accessible name
+    hidden = "collapsed"
     on_change = _sync
     args = (cfg, q)
 
     if q.kind is AnswerKind.STATE:
         state.seed(k, stored.get("state"))
-        st.radio(title, [s.value for s in q.states], key=k, horizontal=True,
-                 format_func=lambda c: _label(c, names), help=help_, on_change=on_change, args=args)
+        st.segmented_control(title, [s.value for s in q.states], key=k, label_visibility=hidden,
+                             format_func=lambda c: _label(c, names), on_change=on_change, args=args)
         if "+" in q.response_model and st.session_state.get(k) is not None:
             state.seed(f"{k}.detail", stored.get("detail") or "")
             st.text_input("Basis or evidence reference (optional)", key=f"{k}.detail", on_change=on_change, args=args)
         return
 
     if q.kind in (AnswerKind.TEXT, AnswerKind.REFERENCE, AnswerKind.MULTI, AnswerKind.RISK_ROWS):
-        state.seed(f"{k}.status", stored.get("state") or ANSWERED)
+        state.seed(f"{k}.status", stored.get("state"))
         is_list = q.kind in (AnswerKind.MULTI, AnswerKind.RISK_ROWS)
         value = stored.get("value")
         state.seed(f"{k}.value", (value if isinstance(value, list) else []) if is_list else (value or ""))
-        col_value, col_status = st.columns([4, 1])
-        with col_status:
-            st.selectbox("Status", [ANSWERED, *[s.value for s in q.states]], key=f"{k}.status",
-                         format_func=lambda c: "Answered" if c == ANSWERED else label_of(c, names),
-                         on_change=on_change, args=args)
-        disabled = st.session_state[f"{k}.status"] != ANSWERED
-        with col_value:
-            if is_list:
-                st.multiselect(title, _value_codes(cfg, q), key=f"{k}.value", disabled=disabled,
-                               format_func=lambda c: _label(c, names), help=help_, on_change=on_change, args=args)
-            else:
-                st.text_area(title, key=f"{k}.value", disabled=disabled, height=80, help=help_,
-                             on_change=on_change, args=args)
+        disabled = st.session_state[f"{k}.status"] is not None
+        if is_list:
+            st.pills(title, _value_codes(cfg, q), selection_mode="multi", key=f"{k}.value", disabled=disabled, wrap=True,
+                     label_visibility=hidden, format_func=lambda c: _label(c, names), on_change=on_change, args=args)
+        else:
+            st.text_area(title, key=f"{k}.value", disabled=disabled, height=80, label_visibility=hidden,
+                         placeholder="Type the answer, or mark it below", on_change=on_change, args=args)
+        st.segmented_control("Or mark it as", [s.value for s in q.states], key=f"{k}.status",
+                             format_func=lambda c: label_of(c, names), on_change=on_change, args=args)
         return
 
     # SINGLE / ROLE / RISK_RATING / NOTIFICATION / EFFECTIVENESS: one closed value or an unresolved state.
     state.seed(k, stored.get("value") or stored.get("state"))
-    st.selectbox(title, [*_value_codes(cfg, q), *[s.value for s in q.states]], key=k,
-                 placeholder="Select…", format_func=lambda c: _label(c, names), help=help_,
-                 on_change=on_change, args=args)
+    st.selectbox(title, [*_value_codes(cfg, q), *[s.value for s in q.states]], key=k, label_visibility=hidden,
+                 placeholder="Select…", format_func=lambda c: _label(c, names), on_change=on_change, args=args)
     if q.kind in (AnswerKind.RISK_RATING, AnswerKind.NOTIFICATION, AnswerKind.EFFECTIVENESS) and st.session_state.get(k):
         state.seed(f"{k}.detail", stored.get("detail") or "")
         st.text_input("Evidence reference", key=f"{k}.detail", on_change=on_change, args=args)

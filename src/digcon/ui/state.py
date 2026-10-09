@@ -7,14 +7,17 @@ questions, other add-ons): the store keeps the answers anyway.
 
 from __future__ import annotations
 
+import hashlib
 import json
-from typing import Any
+from typing import Any, Literal
 
 import streamlit as st
 
 from digcon.domain.models import AssessmentState, ConfigBundle
 
 STORE = "assessment"
+NAV = "nav"  # title of the section shown
+SAVED = "saved_fingerprint"  # fingerprint of the assessment as last downloaded or loaded
 WIDGET_PREFIX = "w."
 
 
@@ -46,10 +49,28 @@ def replace(data: dict[str, Any]) -> None:
     st.session_state[STORE] = AssessmentState.model_validate(data).model_dump(mode="json")
     for key in [k for k in st.session_state if str(k).startswith(WIDGET_PREFIX)]:
         del st.session_state[key]
+    mark_saved()
 
 
 def to_json() -> str:
     return json.dumps(assessment().model_dump(mode="json"), ensure_ascii=False, indent=2)
+
+
+def _fingerprint() -> str:
+    return hashlib.sha256(json.dumps(store(), sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def mark_saved() -> None:
+    st.session_state[SAVED] = _fingerprint()
+
+
+def save_status(cfg: ConfigBundle) -> Literal["empty", "saved", "unsaved"]:
+    """'empty' = nothing entered yet; 'saved' = matches the last downloaded or loaded file."""
+    fresh = empty_store(cfg)
+    fresh["assessment_id"] = store()["assessment_id"]
+    if store() == fresh:
+        return "empty"
+    return "saved" if st.session_state.get(SAVED) == _fingerprint() else "unsaved"
 
 
 def parse_upload(raw: bytes) -> dict[str, Any]:
@@ -63,3 +84,8 @@ def set_or_remove(section: str, key: str, value: dict[str, Any] | None) -> None:
         bucket.pop(key, None)
     else:
         bucket[key] = value
+
+
+def go(title: str) -> None:
+    """Show another section (button callback)."""
+    st.session_state[NAV] = title

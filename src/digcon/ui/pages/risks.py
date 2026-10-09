@@ -85,8 +85,11 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
     for spec in cfg.risks.risks:
         stored = state.store()["risks"].get(spec.id) or {}
         rr = result.risks.get(spec.id)
-        level = f" · initial {label(rr.initial) if rr and rr.initial else '—'} · residual {label(rr.residual) if rr and rr.residual else '—'}" if rr else ""
-        hint = " · suggested" if spec.id in suggested and spec.id not in in_register else ""
+        level = (
+            f" :orange-badge[Initial {label(rr.initial) if rr.initial else '—'}]"
+            f" :gray-badge[Residual {label(rr.residual) if rr.residual else '—'}]" if rr else ""
+        )
+        hint = " :blue-badge[Suggested]" if spec.id in suggested and spec.id not in in_register else ""
         title = f"{spec.id}{' (' + spec.label + ')' if spec.label else ''} — {spec.right.split(';')[0][:90]}{level}{hint}"
         with st.expander(title, expanded=bool(stored)):
             key = f"w.risk.{spec.id}.include"
@@ -100,10 +103,11 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
                 st.caption(spec.safeguards_to_verify)
             if not st.session_state[key]:
                 continue
-            st.markdown("**Initial**")
-            _dims(spec.id, "", stored)
-            st.markdown("**Residual (after verified mitigation)**")
-            _dims(spec.id, "residual_", stored)
+            with st.container(border=True):
+                st.markdown("**Initial**")
+                _dims(spec.id, "", stored)
+                st.markdown("**Residual** :gray[after a linked measure is VERIFIED EFFECTIVE (3.4)]")
+                _dims(spec.id, "residual_", stored)
             state.seed(f"w.risk.{spec.id}.refs", "\n".join(stored.get("evidence_refs", [])))
             st.text_area("Evidence references (one per line)", key=f"w.risk.{spec.id}.refs", height=68,
                          on_change=_sync, args=(spec.id,))

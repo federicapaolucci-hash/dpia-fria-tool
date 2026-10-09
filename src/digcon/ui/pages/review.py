@@ -21,12 +21,12 @@ def render_hard_stops(cfg: ConfigBundle, result: EngineResult) -> None:
     for hs_id, hs in result.hard_stops.items():
         spec = cfg.rule(hs_id)
         if hs.state is RuleElementState.MET:
-            status = "MET — confirmed"
+            status = ":red-badge[MET — confirmed]"
         elif hs.opened:
-            status = f"open · {hs.state.value}"
+            status = f":orange-badge[Open · {hs.state.value.replace('_', ' ')}]"
         else:
-            status = "not opened"
-        with st.expander(f"{hs_id} — {status}", expanded=hs.opened):
+            status = ":gray-badge[Not opened]"
+        with st.expander(f"{hs_id} {status}", expanded=hs.opened):
             st.caption(f"Elements: {spec.trigger_text}")
             st.caption(f"Remediability: {spec.remediability}")
             for el in spec.encoding.elements:

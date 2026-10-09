@@ -1,0 +1,45 @@
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#1F5EDB"
+backgroundColor = "#F4F6FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#18202F"
+linkColor = "#1F5EDB"
+borderColor = "#D5DCE6"
+showWidgetBorder = true
+baseRadius = "8px"
+buttonRadius = "6px"
+font = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif"
+headingFont = "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif"
+headingFontWeights = [700, 650, 600, 600, 600, 600]
+headingFontSizes = ["1.15rem", "1.6rem", "1.12rem", "1rem", "0.95rem", "0.9rem"]
+baseFontSize = 15
+codeFont = "Consolas, 'SFMono-Regular', Menlo, monospace"
+codeTextColor = "#4A5568"
+codeBackgroundColor = "#EEF1F6"
+dataframeHeaderBackgroundColor = "#EEF1F6"
+dataframeBorderColor = "#E1E6EE"
+greenColor = "#1F7A4D"
+blueColor = "#1F5EDB"
+orangeColor = "#B45309"
+violetColor = "#6D3FC4"
+redColor = "#B42318"
+grayColor = "#5B6576"
+
+[theme.sidebar]
+backgroundColor = "#0F1B33"
+secondaryBackgroundColor = "#1A2945"
+textColor = "#E3E8F1"
+primaryColor = "#4C8DFF"
+borderColor = "#2A3B5C"
+codeBackgroundColor = "#1A2945"
+codeTextColor = "#C9D3E3"
+greenColor = "#5CC48E"
+blueColor = "#7FAEFF"
+orangeColor = "#F2A65A"
+violetColor = "#B79CF2"
+redColor = "#F28B82"
+grayColor = "#9AA7BD"

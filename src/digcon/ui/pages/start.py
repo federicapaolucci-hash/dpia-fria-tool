@@ -16,13 +16,16 @@ def _sync_id() -> None:
         state.store()["assessment_id"] = value
 
 
-def save_button(where: str) -> None:
+def save_button(where: str, *, width="content") -> None:
     st.download_button(
         "Save progress (download JSON)",
         state.to_json(),
         file_name=f"{state.store()['assessment_id']}.json",
         mime="application/json",
         key=f"save.{where}",
+        on_click=state.mark_saved,
+        icon=":material/download:",
+        width=width,
         help="Keep this file: upload it in section 1.0 to resume the assessment later.",
     )
 
@@ -30,24 +33,28 @@ def save_button(where: str) -> None:
 def render(cfg: ConfigBundle, result: EngineResult) -> None:
     st.markdown(
         "Work through the four steps in the left menu, in order: first the **core**, then the **add-ons** the "
-        "scoping opens, then the **transversal modules**, then the **outcome**.\n\n"
-        "Answers are kept only in this browser session and are **lost if you reload or close the page**. "
-        "Save progress as a JSON file to resume later: no copy is kept for you."
+        "scoping opens, then the **transversal modules**, then the **outcome**."
     )
-    col_new, col_resume = st.columns(2)
-    with col_new:
+    st.warning(
+        "Answers are kept only in this browser session and are **lost if you reload or close the page**. "
+        "Save progress as a JSON file to resume later: no copy is kept for you.",
+        icon=":material/save:",
+    )
+    col_new, col_resume = st.columns(2, gap="medium")
+    with col_new, st.container(border=True):
         st.subheader("New assessment")
         state.seed("w.meta.id", state.store()["assessment_id"])
         st.text_input("Assessment name", key="w.meta.id", on_change=_sync_id,
                       help="Used as the file name when you save progress.")
-        if st.button("Discard answers and start over",
+        if st.button("Discard answers and start over", icon=":material/restart_alt:",
                      help="Removes every answer in this session. Save progress first if you may need them."):
             state.replace(state.empty_store(cfg))
             st.rerun()
-    with col_resume:
+    with col_resume, st.container(border=True):
         st.subheader("Resume an assessment")
-        upload = st.file_uploader("Saved assessment (JSON)", type=["json"], label_visibility="collapsed")
-        if upload is not None and st.button("Load this assessment", help="Replaces the answers in this session."):
+        upload = st.file_uploader("Saved assessment (JSON)", type=["json"])
+        if upload is not None and st.button("Load this assessment", type="primary", icon=":material/upload_file:",
+                                            help="Replaces the answers in this session."):
             try:
                 state.replace(state.parse_upload(upload.getvalue()))
                 st.rerun()
@@ -56,5 +63,3 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
                          "“Save progress”, unchanged.")
                 with st.expander("Technical details"):
                     st.code(str(exc), language=None)
-    st.divider()
-    save_button("start")

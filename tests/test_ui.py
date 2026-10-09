@@ -41,7 +41,8 @@ def goto(at: AppTest, title) -> AppTest:
 
 def outcome(at: AppTest) -> str:
     goto(at, RESULT_TITLE)
-    return next(m.value for m in at.metric if m.label == "Recommended outcome")
+    banner = next(m.value for m in at.markdown if "Recommended outcome: O" in m.value)
+    return banner.split("Recommended outcome: ", 1)[1][:2]
 
 
 def page_text(at: AppTest) -> str:
@@ -89,7 +90,7 @@ def test_menu_lists_all_four_steps_core_first():
 
 def test_closed_add_ons_are_marked_in_the_menu():
     at = goto(app({}), ROUTING_TITLE)  # baseline: not high-risk
-    assert "closed" in menu_button(at, PHASE_TITLES[Phase.PROVIDER]).label
+    assert "closed" in menu_button(at, PHASE_TITLES[Phase.PROVIDER]).label.lower()
     assert "Not high-risk" in page_text(at)
     at = goto(app({"answers": {"FOLLOW": "YES", "C05": "PROVIDER"}}), ROUTING_TITLE)
     label = menu_button(at, PHASE_TITLES[Phase.PROVIDER]).label
@@ -101,7 +102,7 @@ def test_deployer_role_explains_what_is_missing():
     assert "HIGH RISK = YES" in page_text(at)
     at = goto(app({"answers": {"C05": "DEPLOYER", "FOLLOW": "YES"}}), Phase.DEPLOYER)
     assert "D00 = YES" in page_text(at)
-    at.radio(key="w.D00").set_value("YES").run()
+    at.button_group(key="w.D00").set_value("YES").run()
     assert at.text_area(key="w.D01.value") is not None
 
 
@@ -113,7 +114,7 @@ def test_baseline_assessment_shows_o1():
 
 def test_widget_answer_updates_outcome_and_opens_hard_stop():
     at = goto(app({}), Phase.HOW)
-    at.radio(key="w.C46").set_value("NO").run()
+    at.button_group(key="w.C46").set_value("NO").run()
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["C46"]["state"] == "NO"
     assert outcome(at) == "O4"  # HS05 opened by the signal, not evaluated yet
@@ -130,7 +131,7 @@ def test_widget_answer_updates_outcome_and_opens_hard_stop():
 
 def test_unknown_status_on_text_question_is_a_gap_not_a_no():
     at = goto(app({}), Phase.WHAT)
-    at.selectbox(key="w.C11.status").set_value("UNKNOWN").run()
+    at.button_group(key="w.C11.status").set_value("UNKNOWN").run()
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["C11"]["state"] == "UNKNOWN"
     assert outcome(at) == "O4"
@@ -138,14 +139,14 @@ def test_unknown_status_on_text_question_is_a_gap_not_a_no():
 
 def test_hidden_answers_survive_in_the_store():
     at = goto(app({"answers": {"FOLLOW": "YES", "C05": "PROVIDER", "P01": "YES"}}), Phase.WHAT)
-    at.radio(key="w.FOLLOW").set_value("NO").run()  # provider add-on closes
+    at.button_group(key="w.FOLLOW").set_value("NO").run()  # provider add-on closes
     goto(at, Phase.PROVIDER)
     goto(at, Phase.WHAT)
-    at.radio(key="w.FOLLOW").set_value("YES").run()  # and reopens
+    at.button_group(key="w.FOLLOW").set_value("YES").run()  # and reopens
     goto(at, Phase.PROVIDER)
     no_errors(at)
     assert at.session_state[ui_state.STORE]["answers"]["P01"]["state"] == "YES"
-    assert at.radio(key="w.P01").value == "YES"
+    assert at.button_group(key="w.P01").value == "YES"
 
 
 @pytest.mark.parametrize(
@@ -164,7 +165,7 @@ def test_complete_assessment_per_role_from_the_ui(role, extra):
         goto(at, Phase.PROVIDER)
         for q, v in {"P01": "YES", "P02": "NO", "P03": "YES", "P04": "YES", "P05": "NO",
                      "P06": "YES", "P07": "YES", "P08": "YES", "P09": "YES", "P10": "YES"}.items():
-            at.radio(key=f"w.{q}").set_value(v).run()
+            at.button_group(key=f"w.{q}").set_value(v).run()
         goto(at, RULES_TITLE)
         at.checkbox(key="w.gate.RMS-9I").check().run()
         at.text_input(key="w.gate.RMS-9I.decision").input("Residual risk acceptable").run()
@@ -180,10 +181,10 @@ def test_complete_assessment_per_role_from_the_ui(role, extra):
         }
         for q, v in texts.items():
             at.text_area(key=f"w.{q}.value").input(v).run()
-        at.multiselect(key="w.D03.value").set_value(["WORKERS_CANDIDATES"]).run()
-        at.multiselect(key="w.D04.value").set_value(["RISK-21"]).run()
-        at.radio(key="w.D07").set_value("NO").run()
-        at.radio(key="w.D08").set_value("NO").run()
+        at.button_group(key="w.D03.value").set_value(["WORKERS_CANDIDATES"]).run()
+        at.button_group(key="w.D04.value").set_value(["RISK-21"]).run()
+        at.button_group(key="w.D07").set_value("NO").run()
+        at.button_group(key="w.D08").set_value("NO").run()
         at.selectbox(key="w.D10").set_value("DONE").run()
         goto(at, RULES_TITLE)
         for el in ("FRIA-27A.E1", "FRIA-27D.E1", "FRIA-27E.E1", "FRIA-27F.E1", "FRIA-27I.E1"):

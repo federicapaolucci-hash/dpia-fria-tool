@@ -51,13 +51,16 @@ def render(cfg: ConfigBundle, result: EngineResult, phase: Phase) -> None:
 
     shown = [q for q in cfg.questions.questions if q.phase is phase and q.id in visible]
     answered = sum(1 for q in shown if q.id in state.store()["answers"])
-    st.caption(f"{answered} of {len(shown)} questions answered. UNKNOWN, N/A and NOT OWNED are answers too: never treated as NO.")
-    current = None
+    st.progress(answered / len(shown) if shown else 0.0, text=f"{answered} of {len(shown)} questions answered")
+    st.caption("UNKNOWN, N/A and NOT OWNED are answers too: never treated as NO.")
+    groups: dict[str, list] = {}
     for q in shown:
-        if q.subsection != current:
-            current = q.subsection
-            st.subheader(subsection(current))
-        renderer.question(cfg, q)
+        groups.setdefault(q.subsection, []).append(q)
+    for name, questions in groups.items():
+        with st.container(border=True):
+            st.subheader(subsection(name))
+            for q in questions:
+                renderer.question(cfg, q)
 
     if phase in (Phase.INTRO, Phase.WHAT):
         st.divider()
