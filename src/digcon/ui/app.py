@@ -169,6 +169,25 @@ def _menu(cfg, steps: dict[str, list], res: EngineResult | None, marks: dict[str
                 )
 
 
+def _restore(cfg, stored: dict) -> None:
+    """First run after a reload: reopen the last section and bring back the browser copy plus unsent text."""
+    if stored.get("nav") in {t for items in _steps().values() for t, _ in items}:
+        st.session_state[NAV] = stored["nav"]
+    if state.save_status(cfg) != "empty":
+        return
+    drafts = stored.get("drafts") if isinstance(stored.get("drafts"), dict) else {}
+    if not stored.get("assessment") and not drafts:
+        return
+    try:
+        data = state.parse_upload(stored["assessment"].encode("utf-8")) if stored.get("assessment") else state.empty_store(cfg)
+        bridge.apply_drafts(cfg, data, drafts, result.GOVERNANCE_FIELDS, set(sep.ENUM_FIELDS))
+        state.replace(data, from_file=False)
+    except ValueError:
+        return  # an unreadable browser copy is ignored; the next answer overwrites it
+    st.session_state[RESTORED] = True
+    st.rerun()
+
+
 def _header() -> None:
     title_col, method_col = st.columns([5, 1], vertical_alignment="bottom")
     with title_col, st.container(key="apphead"):
@@ -202,13 +221,8 @@ def main() -> None:
     cfg = _config()
     state.init(cfg)
     stored = bridge.sync(None if state.save_status(cfg) == "empty" else state.to_json(), st.session_state.get(NAV) or START_TITLE)
-    if stored and state.save_status(cfg) == "empty":
-        try:
-            state.replace(state.parse_upload(stored.encode("utf-8")), from_file=False)
-            st.session_state[RESTORED] = True
-            st.rerun()
-        except ValueError:
-            pass  # an unreadable browser copy is ignored; it is overwritten by the next answer
+    if stored:
+        _restore(cfg, stored)
     if st.session_state.pop(RESTORED, False):
         st.toast("Answers restored from this browser's autosave.", icon=":material/history:")
     try:

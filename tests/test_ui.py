@@ -218,3 +218,30 @@ def test_governance_decision_is_its_own_section():
     at.text_input(key="w.gov.G01").input("Approved for a 6-month pilot").run()
     assert at.session_state[ui_state.STORE]["governance"]["g01_decision"] == "Approved for a 6-month pilot"
     assert outcome(at) == "O1"  # the recorded decision never changes the recommended outcome
+
+
+def test_unsent_text_drafts_are_laid_over_the_browser_copy():
+    from digcon.config import default_config
+    from digcon.ui import bridge
+    from digcon.ui.pages import result as result_page, sep as sep_page
+
+    cfg = default_config()
+    data = ui_state.AssessmentState(assessment_id="x", workbook_version=cfg.version).model_dump(mode="json")
+    data["answers"]["C11"] = {"question_id": "C11", "state": "UNKNOWN"}
+    drafts = {
+        "w-C01-value": "  Typed before reload ",  # text question: becomes the answer
+        "w-C11-value": "ignored",  # marked UNKNOWN: its text box is disabled
+        "w-gov-G01": "Approved",
+        "w-sep-SEP01": "Trigger text",
+        "w-sep-SEP00": "YES",  # enum field: not a text draft
+        "w-meta-id": "my-case",
+        "w-NOPE-value": "unknown question",
+    }
+    bridge.apply_drafts(cfg, data, drafts, result_page.GOVERNANCE_FIELDS, set(sep_page.ENUM_FIELDS))
+    state = ui_state.AssessmentState.model_validate(data)
+    assert state.answers["C01"].value == "Typed before reload"
+    assert state.answers["C11"].state.value == "UNKNOWN"
+    assert state.governance.g01_decision == "Approved"
+    assert state.sep.texts == {"SEP01": "Trigger text"}
+    assert state.assessment_id == "my-case"
+    assert "NOPE" not in state.answers
