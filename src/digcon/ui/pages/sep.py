@@ -1,4 +1,4 @@
-"""Section 9: stakeholder engagement process (04A). Evidence and process only: no direct outcome."""
+"""Section 3.1: stakeholder engagement process (04A). Evidence and process only: no direct outcome."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         "Stakeholder evidence changes a risk only through an explicit link; consultation alone never lowers risk."
     )
     if result.sep_status:
-        st.info(f"SEP status: **{label(result.sep_status)}**")
+        st.markdown(f"SEP status: **{label(result.sep_status)}**")
     sep = state.store()["sep"]
     for f in cfg.sep.fields:
         key = f"w.sep.{f.id}"

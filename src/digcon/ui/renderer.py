@@ -6,7 +6,7 @@ from typing import Any
 
 import streamlit as st
 
-from digcon.domain.enums import AnswerKind, NotificationStatus, RiskLevel, Role, RuleElementState, label
+from digcon.domain.enums import AnswerKind, ControlEffectiveness, NotificationStatus, RiskLevel, Role, RuleElementState, label
 from digcon.domain.models import ConfigBundle, QuestionSpec, RuleElementSpec
 
 from . import state
@@ -27,6 +27,8 @@ def _option_names(cfg: ConfigBundle, q: QuestionSpec) -> dict[str, str]:
         names |= {r.value: label(r) for r in RiskLevel}
     elif q.kind is AnswerKind.NOTIFICATION:
         names |= {n.value: label(n) for n in NotificationStatus}
+    elif q.kind is AnswerKind.EFFECTIVENESS:
+        names |= {e.value: label(e) for e in ControlEffectiveness}
     elif q.kind in (AnswerKind.SINGLE, AnswerKind.MULTI) and q.option_set:
         names |= {o.code: o.label for os_ in cfg.questions.option_sets if os_.id == q.option_set for o in os_.options}
     elif q.kind is AnswerKind.RISK_ROWS:
@@ -69,13 +71,16 @@ def _sync(cfg: ConfigBundle, q: QuestionSpec) -> None:
             answer = {"question_id": q.id, "state": v}
         else:
             answer = {"question_id": q.id, "value": v}
+        detail = (ss.get(f"{k}.detail") or "").strip()
+        if answer and detail:
+            answer["detail"] = detail
     state.set_or_remove("answers", q.id, answer)
 
 
 def question(cfg: ConfigBundle, q: QuestionSpec) -> None:
     _question(cfg, q)
     if q.id in QUESTION_NOTES:
-        st.caption(f"ℹ️ {QUESTION_NOTES[q.id]}")
+        st.caption(QUESTION_NOTES[q.id])
 
 
 def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
@@ -93,7 +98,7 @@ def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
                  format_func=lambda c: _label(c, names), help=help_, on_change=on_change, args=args)
         if "+" in q.response_model and st.session_state.get(k) is not None:
             state.seed(f"{k}.detail", stored.get("detail") or "")
-            st.text_input("Basis / reference (optional)", key=f"{k}.detail", on_change=on_change, args=args)
+            st.text_input("Basis or evidence reference (optional)", key=f"{k}.detail", on_change=on_change, args=args)
         return
 
     if q.kind in (AnswerKind.TEXT, AnswerKind.REFERENCE, AnswerKind.MULTI, AnswerKind.RISK_ROWS):
@@ -116,11 +121,14 @@ def _question(cfg: ConfigBundle, q: QuestionSpec) -> None:
                              on_change=on_change, args=args)
         return
 
-    # SINGLE / ROLE / RISK_RATING / NOTIFICATION: one closed value or an unresolved state.
+    # SINGLE / ROLE / RISK_RATING / NOTIFICATION / EFFECTIVENESS: one closed value or an unresolved state.
     state.seed(k, stored.get("value") or stored.get("state"))
     st.selectbox(title, [*_value_codes(cfg, q), *[s.value for s in q.states]], key=k,
                  placeholder="Select…", format_func=lambda c: _label(c, names), help=help_,
                  on_change=on_change, args=args)
+    if q.kind in (AnswerKind.RISK_RATING, AnswerKind.NOTIFICATION, AnswerKind.EFFECTIVENESS) and st.session_state.get(k):
+        state.seed(f"{k}.detail", stored.get("detail") or "")
+        st.text_input("Evidence reference", key=f"{k}.detail", on_change=on_change, args=args)
 
 
 def label_of(code: str, names: dict[str, str]) -> str:

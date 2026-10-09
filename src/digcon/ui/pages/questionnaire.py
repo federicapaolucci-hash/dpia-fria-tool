@@ -7,7 +7,10 @@ from digcon.domain.models import ConfigBundle
 from digcon.engine import EngineResult
 
 from .. import renderer, state
-from ..labels import subsection
+from ..labels import PHASE_TITLES, REVIEW_TITLE, subsection
+
+PROVIDER = PHASE_TITLES[Phase.PROVIDER].split(" ", 1)[0]
+DEPLOYER = PHASE_TITLES[Phase.DEPLOYER].split(" ", 1)[0]
 
 
 def routing_box(result: EngineResult) -> None:
@@ -17,22 +20,24 @@ def routing_box(result: EngineResult) -> None:
     high_risk = result.high_risk
     lines = [f"High risk (FOLLOW): **{high_risk or 'not answered'}** · Role (C05): **{role or 'not answered'}**"]
     if result.routing_suspended:
-        lines.append("⚠️ C03 = YES: add-ons suspended until the HS07 legal gate excludes the prohibition (section 6).")
+        lines.append(f"**Add-ons suspended.** C03 = YES: they stay closed until the HS07 legal gate excludes the prohibition ({REVIEW_TITLE}).")
     else:
         if result.provider_module:
-            lines.append("✅ Article 9 provider add-on open (5A).")
+            lines.append(f"**Article 9 provider add-on: open** ({PROVIDER}).")
         elif role in ("PROVIDER", "JOINT"):
-            lines.append("Article 9 add-on (5A): needs **HIGH RISK = YES**.")
+            lines.append(f"Article 9 add-on ({PROVIDER}): needs **HIGH RISK = YES**.")
         if result.deployer_module:
-            lines.append("✅ Article 27 deployer add-on open (5B).")
+            lines.append(f"**Article 27 deployer add-on: open** ({DEPLOYER}).")
         elif role in ("DEPLOYER", "JOINT"):
             if high_risk != "YES":
-                lines.append("Article 27 add-on (5B): needs **HIGH RISK = YES**, then **D00 = YES** in section 5B.")
+                lines.append(f"Article 27 add-on ({DEPLOYER}): needs **HIGH RISK = YES**, then **D00 = YES** in section {DEPLOYER}.")
             elif (answers.get("D00") or {}).get("state") != "YES":
-                lines.append("Article 27 add-on (5B): answer **D00 = YES** (first question of section 5B) to open D01–D10.")
+                lines.append(f"Article 27 add-on ({DEPLOYER}): answer **D00 = YES** (first question of section {DEPLOYER}) to open D01–D10.")
         if high_risk == "NO":
             lines.append("Not high-risk: the AI Act add-ons stay closed; the fundamental-rights assessment continues on the core.")
-    st.info("\n\n".join(lines), icon="🧭")
+    with st.container(border=True):
+        st.markdown("**Routing**")
+        st.markdown("\n\n".join(lines))
 
 
 def render(cfg: ConfigBundle, result: EngineResult, phase: Phase) -> None:
@@ -44,10 +49,11 @@ def render(cfg: ConfigBundle, result: EngineResult, phase: Phase) -> None:
         if phase is Phase.DEPLOYER and "D00" not in visible:
             return
 
+    shown = [q for q in cfg.questions.questions if q.phase is phase and q.id in visible]
+    answered = sum(1 for q in shown if q.id in state.store()["answers"])
+    st.caption(f"{answered} of {len(shown)} questions answered. UNKNOWN, N/A and NOT OWNED are answers too: never treated as NO.")
     current = None
-    for q in cfg.questions.questions:
-        if q.phase is not phase or q.id not in visible:
-            continue
+    for q in shown:
         if q.subsection != current:
             current = q.subsection
             st.subheader(subsection(current))

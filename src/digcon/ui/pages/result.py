@@ -1,4 +1,4 @@
-"""Assessment result: metrics first, then findings, registers, governance decision and audit trail."""
+"""Step 4: recommended outcome (metrics, findings, registers, audit trail) and the final governance decision."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from digcon.domain.models import ConfigBundle
 from digcon.engine import EngineResult
 
 from .. import state
-from ..labels import OUTCOME_TEXT, OUTCOME_TITLES
+from ..labels import MITIGATION_TITLE, OUTCOME_TEXT, OUTCOME_TITLES, RISKS_TITLE
 
 GOVERNANCE_FIELDS = {
     "G01": "g01_decision",
@@ -19,7 +19,7 @@ GOVERNANCE_FIELDS = {
     "G04": "g04_conditions",
     "G05": "g05_reasoning",
 }
-_BOX = {Outcome.O1: st.success, Outcome.O2: st.info, Outcome.O3: st.warning, Outcome.O4: st.warning, Outcome.O5: st.error}
+_COLOUR = {Outcome.O1: "green", Outcome.O2: "blue", Outcome.O3: "orange", Outcome.O4: "orange", Outcome.O5: "red"}
 
 
 def _describe(cfg: ConfigBundle, ident: str) -> str:
@@ -41,9 +41,13 @@ def findings_table(cfg: ConfigBundle, findings) -> pd.DataFrame:
 def _section(title: str, cfg: ConfigBundle, findings, empty: str) -> None:
     st.subheader(title)
     if findings:
-        st.dataframe(findings_table(cfg, findings), width="stretch", hide_index=True)
+        table = findings_table(cfg, findings)
+        if table["Issue"].nunique() == 1:  # one shared message: say it once, above the table
+            st.caption(table["Issue"].iloc[0])
+            table = table.drop(columns="Issue")
+        st.dataframe(table, width="stretch", hide_index=True)
     else:
-        st.success(empty)
+        st.caption(empty)
 
 
 def _sync_governance() -> None:
@@ -53,7 +57,7 @@ def _sync_governance() -> None:
 
 def render(cfg: ConfigBundle, result: EngineResult) -> None:
     opened = [h for h, v in result.hard_stops.items() if v.opened]
-    cols = st.columns(6)
+    cols = [*st.columns(3), *st.columns(3)]
     cols[0].metric("Recommended outcome", result.outcome.value)
     cols[1].metric("Evidence gaps", len(result.evidence_gaps))
     cols[2].metric("Open remediations", len(result.open_remediations))
@@ -61,17 +65,19 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
     cols[4].metric("Hard stops open", len(opened))
     cols[5].metric("Legal reviews pending", len(result.pending_reviews))
 
-    _BOX[result.outcome](f"**{OUTCOME_TITLES[result.outcome]}** — {OUTCOME_TEXT[result.outcome]}")
+    with st.container(border=True):
+        st.markdown(f"### :{_COLOUR[result.outcome]}[{OUTCOME_TITLES[result.outcome]}]")
+        st.markdown(OUTCOME_TEXT[result.outcome])
     st.caption(
         f"Rule {result.outcome_rule} · precedence O5 → O4 → O3 → O2 → O1 · workbook {result.workbook_version}. "
         "This is the recommended outcome, not the final governance decision."
     )
 
-    _section("Evidence gaps (block the outcome: O4)", cfg, result.evidence_gaps, "No material evidence gap.")
-    _section("Open remediations (O3)", cfg, result.open_remediations, "No open remediation.")
+    _section("Evidence gaps (O4 until resolved)", cfg, result.evidence_gaps, "No material evidence gap.")
+    _section("Open remediations (O3 until resolved)", cfg, result.open_remediations, "No open remediation.")
     _section("Conditions (O2)", cfg, result.open_conditions, "No remaining condition.")
     _section("Legal reviews pending", cfg, result.pending_reviews, "No legal review pending.")
-    _section("To be verified (does not block)", cfg, result.verification_requests, "Nothing left to verify.")
+    _section("To be verified (does not change the outcome)", cfg, result.verification_requests, "Nothing left to verify.")
 
     st.subheader("Hard stops")
     st.dataframe(
@@ -91,7 +97,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         st.dataframe(
             pd.DataFrame(
                 [
-                    {"Rule": r, "Status": label(s), "Action": ", ".join(e.value for e in result.rules[r].effects)}
+                    {"Rule": r, "Status": label(s), "Action": ", ".join(label(e) for e in result.rules[r].effects)}
                     for r, s in result.prop_statuses.items()
                 ]
             ),
@@ -100,7 +106,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         )
         st.caption("The engine never concludes 'proportionate' or 'disproportionate': normative balancing stays with legal review.")
     else:
-        st.info("No proportionality check applicable yet.")
+        st.caption("No proportionality check applicable yet.")
 
     st.subheader("Fundamental rights risk register")
     if result.risks:
@@ -119,7 +125,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
             hide_index=True,
         )
     else:
-        st.info("No risk in the case register yet (section 7).")
+        st.caption(f"No risk in the case register yet ({RISKS_TITLE}).")
 
     activated = [m for m in state.assessment().mitigations.values() if m.activated]
     st.subheader("Mitigation plan (activated measures)")
@@ -138,20 +144,12 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
             hide_index=True,
         )
     else:
-        st.info("No measure activated (section 8).")
+        st.caption(f"No measure activated ({MITIGATION_TITLE}).")
 
     if result.warnings:
         st.subheader("Warnings")
         for w in result.warnings:
             st.warning(w)
-
-    st.subheader("Final governance decision log")
-    st.caption("Recorded by the responsible person or body. The engine never fills these fields.")
-    gov = state.store()["governance"]
-    for g in cfg.questions.governance_fields:
-        key = f"w.gov.{g.id}"
-        state.seed(key, gov.get(GOVERNANCE_FIELDS[g.id]) or "")
-        st.text_input(f"{g.field} `{g.id}`", key=key, help=g.purpose, on_change=_sync_governance)
 
     with st.expander(f"Audit trail ({len(result.audit_trail)} events)"):
         if result.audit_defects:
@@ -168,3 +166,17 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
             width="stretch",
             hide_index=True,
         )
+
+
+def render_governance(cfg: ConfigBundle, result: EngineResult) -> None:
+    st.markdown(
+        f"Recommended outcome: **{OUTCOME_TITLES[result.outcome]}** (rule {result.outcome_rule}). "
+        "The final decision is distinct from it: it is recorded by the responsible person or body, "
+        "and the engine never fills these fields (SYS-03)."
+    )
+    gov = state.store()["governance"]
+    for g in cfg.questions.governance_fields:
+        key = f"w.gov.{g.id}"
+        state.seed(key, gov.get(GOVERNANCE_FIELDS[g.id]) or "")
+        st.text_input(f"{g.field} `{g.id}`", key=key, help=g.purpose, on_change=_sync_governance)
+    st.caption("To reassess later, save progress below and load the file in section 1.0 when the review date or a trigger arrives.")
