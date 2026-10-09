@@ -1,4 +1,5 @@
-# 07_TEST_FIXTURES — Hard stops (18): positive and negative for HS01–HS09, human gate = YES in all.
+# 07_TEST_FIXTURES — Hard stops (18 + 1): positive and negative for HS01–HS09, human gate = YES in all,
+# plus the cross-cutting UNKNOWN control HS-UNK-01 (v1.0.1).
 # Positive: every constituent element MET + legal gate COMPLETED -> HS MET, O5.
 # Negative: one element NOT_MET (+ gate) -> HS NOT_MET, never O5.
 # HS08/HS09 need a verified mitigation linked to the HS for the mitigation element (AS-018).
@@ -140,3 +141,11 @@
     elements: {HS09.E1: MET, HS09.E2: NOT_MET, HS09.E3: NOT_MET}
     human_gates: {HS09: COMPLETED}
   expect: {hs: {HS09: NOT_MET}, not_outcome: O5}
+
+- id: HS-UNK-01
+  workbook: "At least one required constituent element is UNKNOWN / not evidenced; no approved rule permits inference"
+  patch:
+    answers: {C46: "NO"}
+    elements: {HS05.E1: MET, HS05.E2: UNCERTAIN, HS05.E3: MET}
+    human_gates: {HS05: COMPLETED}
+  expect: {hs: {HS05: UNCERTAIN}, not_outcome: O5, outcome: O4}

@@ -426,10 +426,21 @@ class Evaluator:
         self._rules[rid] = ev
         return ev
 
-    def substantive_rules(self, reading: EngineFlag | None = None) -> list[str]:
-        """Non-OUT rules, excluding those that read the flag being computed."""
+    def substantive_rules(self, reading: EngineFlag | None = None, producing: RuleEffect | None = None) -> list[str]:
+        """Non-OUT rules, excluding those that read the flag being computed.
+
+        With ``producing``, only rules that can emit that effect at all (from the config, before
+        evaluation): a flag never evaluates rules that cannot contribute to it, so derived rules
+        reading different flags do not depend on each other.
+        """
         skip = self._flag_readers[reading] if reading else set()
-        return [r.id for r in self.cfg.rules.rules if r.family != "OUT" and r.id not in skip]
+        return [
+            r.id
+            for r in self.cfg.rules.rules
+            if r.family != "OUT"
+            and r.id not in skip
+            and (producing is None or producing in {e for c in r.encoding.cases for e in c.effects} | set(r.encoding.gap_effects))
+        ]
 
     def flag(self, f: EngineFlag) -> tuple[bool, list[str]]:
         if f in self._flags:
@@ -466,16 +477,21 @@ class Evaluator:
                 if self.decision_effect(m) is DecisionEffect.CONTINUOUS_CONDITION
                 and m.status is not MitigationStatus.NOT_APPLICABLE
             ]
-        rules = self.substantive_rules(f)
         if f is EngineFlag.REMEDIATION_TRIGGERED:
+            rules = self.substantive_rules(f, RuleEffect.REMEDIATION_REQUIRED)
             return [f"rule:{r}" for r in rules if RuleEffect.REMEDIATION_REQUIRED in self.rule(r).effects]
+        if f is EngineFlag.RISK_INPUT_TRIGGERED:
+            rules = self.substantive_rules(f, RuleEffect.RISK_INPUT)
+            return [f"rule:{r}" for r in rules if RuleEffect.RISK_INPUT in self.rule(r).effects]
         if f is EngineFlag.OPEN_REQUIRED_REMEDIATION:
+            rules = self.substantive_rules(f, RuleEffect.REMEDIATION_REQUIRED)
             return [
                 f"rule:{r}"
                 for r in rules
                 if RuleEffect.REMEDIATION_REQUIRED in self.rule(r).effects and not self.remediation_resolved(r)
             ]
         if f is EngineFlag.MATERIAL_EVIDENCE_GAP:
+            rules = self.substantive_rules(f, RuleEffect.EVIDENCE_GAP)
             return [f"rule:{r}" for r in rules if self.is_material_gap(r)]
         raise EngineError(f"unknown flag {f}")
 

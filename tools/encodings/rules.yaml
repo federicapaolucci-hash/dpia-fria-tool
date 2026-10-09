@@ -1,4 +1,4 @@
-# Hand-coded structure of the 73 rules of 05_REGOLE_HS.
+# Hand-coded structure of the 76 rules of 05_REGOLE_HS (workbook v1.0.1).
 #
 # The workbook gives triggers in prose; this file turns each one into conditions over
 # answers, rule elements, other rules and engine flags (see digcon.domain.models.Condition).
@@ -13,7 +13,7 @@
 #   elements are phrased as the deficiency: MET = the deficiency is present (AS-028).
 # - HS-* elements: text, order and count come from the workbook ("... AND ..."); this
 #   file only adds source / binding / flags, in the same order.
-# - Every choice the workbook does not make cites an AS-* of spec/ANOMALIE_REV2.md.
+# - Every choice the workbook does not make cites an AS-* of spec/ANOMALIE.md.
 
 _shared:
   routing_not_suspended: &routing_not_suspended
@@ -87,7 +87,7 @@ rules:
       - when: {flag: VISIBLE_QUESTION_UNRESOLVED}
         effects: [EVIDENCE_GAP]
     review: {flag: VISIBLE_QUESTION_NOT_APPLICABLE}
-    assumptions: [AS-004, AS-013]
+    assumptions: [AS-013]
 
   QUAL-01:
     kind: MANUAL
@@ -253,6 +253,66 @@ rules:
     review:
       all: [{q: D06, provided: true}, {element: FRIA-27F.E1, unresolved: true}]
     assumptions: [AS-013, AS-028]
+
+  FRIA-27G:
+    kind: MANUAL
+    inputs: [D07]
+    elements:
+      - {id: FRIA-27G.E1, source: MANUAL, text: "The prior FRIA / provider impact assessment relied on (D07) has no reference, or is not sufficiently comparable to the current context"}
+    cases:
+      - when:
+          all: [{q: D07, is: [YES]}, {element: FRIA-27G.E1, is: [MET]}]
+        effects: [EVIDENCE_GAP]
+      - when: {q: D07, is: [YES]}
+        effects: [RECORD]
+    gap: {q: D07, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D07, is: [YES]}, {element: FRIA-27G.E1, unresolved: true}]
+    assumptions: [AS-013, AS-028, AS-035]
+    note: "D07 = NO: the current FRIA is completed in full, nothing is reused."
+
+  FRIA-27H:
+    kind: STRUCTURED
+    inputs: [D08]
+    cases:
+      - when: {q: D08, is: [YES]}
+        effects: [REMEDIATION_REQUIRED, RISK_INPUT, SEP_ASSESSMENT, MITIGATION_REQUIRED]
+    gap: {q: D08, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-036]
+    note: "A changed Art. 27(1) element triggers the FRIA update (risks via RSEL-01, SEP, MIT); never O5."
+
+  FRIA-27I:
+    kind: MANUAL
+    inputs: [D09]
+    elements:
+      - {id: FRIA-27I.E1, source: MANUAL, text: "The DPIA cross-reference (D09) is missing or inadequate: an Art. 27 element it is meant to cover is not verifiable"}
+    cases:
+      - when:
+          all: [{q: D09, provided: true}, {element: FRIA-27I.E1, is: [MET]}]
+        effects: [EVIDENCE_GAP]
+      - when: {q: D09, provided: true}
+        effects: [RECORD]
+    gap: {q: D09, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    review:
+      all: [{q: D09, provided: true}, {element: FRIA-27I.E1, unresolved: true}]
+    assumptions: [AS-013, AS-028, AS-035]
+    note: "The existence of a DPIA never proves Art. 27 compliance by itself."
+
+  FRIA-27J:
+    kind: STRUCTURED
+    inputs: [D10]
+    cases:
+      - when: {q: D10, is: [TO_DO]}
+        effects: [REMEDIATION_REQUIRED]
+      - when: {q: D10, is: [DONE, EXEMPT_ART46_1]}
+        effects: [RECORD]
+    gap: {q: D10, unresolved: true}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-036]
+    note: "TO DO is an open compliance action (O3 until DONE or the exemption is recorded), never O5."
 
   # ------------------------------------------------------------------ hard stops
   # A HS is "opened" by its screening condition or by a person recording any element as
@@ -754,7 +814,7 @@ rules:
       - when:
           any:
             - {q: C41, is: [NO]}
-            - {q: C43, is: [HIGH, VERY_HIGH]}
+            - {q: C43, is: [INEFFECTIVE]}
             - {element: DQ-01.E1, is: [MET]}
         effects: [REMEDIATION_REQUIRED, RISK_INPUT]
     gap:
@@ -762,11 +822,12 @@ rules:
         - {q: C41, unresolved: true}
         - {q: C42, unresolved: true}
         - {q: C43, unresolved: true}
+        - {q: C43, is: [NOT_VERIFIED]}
     gap_effects: [EVIDENCE_GAP]
     review:
       all: [{q: C42, provided: true}, {element: DQ-01.E1, unresolved: true}]
-    assumptions: [AS-013, AS-028]
-    note: "C43 is a declared rating: HIGH/VERY HIGH raises action; a lower rating never reduces risk without verification."
+    assumptions: [AS-013, AS-028, AS-034]
+    note: "C43 is control-effectiveness evidence: VERIFIED EFFECTIVE never lowers a risk by itself (residual risk only in the register)."
 
   BIAS-01:
     kind: MANUAL
@@ -850,10 +911,10 @@ rules:
             - {q: C11, provided: true}
             - {q: C40, provided: true}
             - {q: C47, provided: true}
-            - {q: C34, provided: true}
-            - {q: C35, provided: true}
+            - any: [{q: C34, provided: true}, {q: C34, is: [N_A]}]
+            - any: [{q: C35, provided: true}, {q: C35, is: [N_A]}]
         status: SUPPORTED
-    assumptions: [AS-013, AS-024]
+    assumptions: [AS-013, AS-024, AS-033]
 
   PROP-02:
     kind: MANUAL
@@ -951,6 +1012,10 @@ rules:
       - {id: PROP-06.E2, source: MANUAL, text: "A declared safeguard is not operational, not relevant to the harm, not specific, not verifiable or not capable of reducing likelihood or severity"}
     cases:
       - when:
+          any: [{q: C43, is: [INEFFECTIVE]}, {q: C48, is: [INEFFECTIVE]}]
+        effects: [REMEDIATION_REQUIRED, SCRUTINY]
+        status: REMEDIATION_REQUIRED
+      - when:
           all:
             - &safeguard_relied_on
               any:
@@ -969,6 +1034,14 @@ rules:
         effects: [EVIDENCE_GAP]
         status: EVIDENCE_GAP
       - when:
+          any:
+            - {q: C43, unresolved: true}
+            - {q: C43, is: [NOT_VERIFIED]}
+            - {q: C48, unresolved: true}
+            - {q: C48, is: [NOT_VERIFIED]}
+        effects: [EVIDENCE_GAP]
+        status: EVIDENCE_GAP
+      - when:
           all:
             - *safeguard_relied_on
             - any:
@@ -982,7 +1055,7 @@ rules:
             - {element: PROP-06.E1, is: [NOT_MET]}
             - {element: PROP-06.E2, is: [NOT_MET]}
         status: SUPPORTED
-    assumptions: [AS-013, AS-028]
+    assumptions: [AS-013, AS-028, AS-034]
     note: "A declared safeguard never reduces residual risk until verified (PROP-T06)."
 
   PROP-07:
@@ -998,7 +1071,10 @@ rules:
       - when: {risk: ANY, initial_at_least: HIGH, residual_missing: true}
         effects: [VERIFICATION_REQUEST]
         status: EVIDENCE_GAP
-    assumptions: [AS-019, AS-028]
+      - when: {q: C34, is: [HIGH, VERY_HIGH]}
+        effects: [SCRUTINY, VERIFICATION_REQUEST]
+        status: EVIDENCE_GAP
+    assumptions: [AS-019, AS-028, AS-033]
     note: "HIGH residual risk is never 'disproportionate' and never O5 (PROP-T07)."
 
   PROP-08:
@@ -1083,3 +1159,19 @@ rules:
     note: "Vulnerability alone is never a negative outcome or O5 (PROP-T09)."
 
   PROP-11: {kind: SYSTEM, note: "Output rule: the report lists, per applicable PROP rule, status + evidence + linked RISK/MIT + human-review flag."}
+
+  # ------------------------------------------------------------------ risk selector / active set (v1.0.1)
+  RSEL-01:
+    kind: DERIVED
+    cases:
+      - when: {flag: RISK_INPUT_TRIGGERED}
+        effects: [RISK_INPUT]
+    gap:
+      all:
+        - {flag: RISK_INPUT_TRIGGERED}
+        - not: {risk: ANY, initial_at_least: VERY_LOW}
+    gap_effects: [EVIDENCE_GAP]
+    assumptions: [AS-032]
+    note: "Selection from the frozen 11-risk catalogue stays human (section 7): the engine suggests, never creates a RISK id."
+
+  RACT-01: {kind: SYSTEM, note: "Active risk set = the RISK-* records of the case register (concrete ids, never a wildcard), read by every rule that looks at risks."}

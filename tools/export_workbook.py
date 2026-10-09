@@ -6,7 +6,7 @@
 
 The workbook is the only source of logic. What it leaves in prose (triggers, visibility,
 option lists) is hand-coded in tools/encodings/*.yaml and merged here; every choice cites
-an AS-* entry of spec/ANOMALIE_REV2.md. Unknown labels, unknown IDs and unexpected sheet
+an AS-* entry of spec/ANOMALIE.md. Unknown labels, unknown IDs and unexpected sheet
 layouts are errors: nothing is guessed. openpyxl is used only here, never at runtime.
 """
 
@@ -32,7 +32,6 @@ from digcon.domain.enums import (  # noqa: E402
     MitigationAllowed,
     MitigationHierarchy,
     MitigationRequirement,
-    MitigationStatus,
     MitigationTiming,
     DecisionEffect,
     Phase,
@@ -48,9 +47,10 @@ from digcon.domain.enums import (  # noqa: E402
 from digcon.domain.models import ConfigBundle  # noqa: E402
 from digcon.domain.validation import Finding, validate_bundle  # noqa: E402
 
-WORKBOOK_VERSION = "T17-REV2"
-DEFAULT_WORKBOOK = ROOT.parent / "spec" / "DIGCON_T17_DECISION_ENGINE_REV_2.xlsx"
-DEFAULT_ANOMALIES = ROOT.parent / "spec" / "ANOMALIE_REV2.md"
+WORKBOOK_VERSION = "T17-v1.0.1"
+DEFAULT_WORKBOOK = ROOT.parent / "spec" / "DIGCON_T17_DECISION_ENGINE.xlsx"
+DEFAULT_ANOMALIES = ROOT.parent / "spec" / "ANOMALIE.md"
+FREEZE_MARK = "Functional Specification v1.0.1 FROZEN"  # 08_FREEZE_REVIEW!A1
 ENCODINGS = ROOT / "tools" / "encodings"
 DEFAULT_OUT = ROOT / "config"
 
@@ -73,7 +73,8 @@ RISK_HEADERS_USED = {
     35: "PROP rule(s)",
 }  # fmt: skip
 MITIGATION_HEADERS = [
-    "Mitigation ID", "Source type", "Source ID(s)", "Risk ID", "Source rule / HS ID (PROP-* / RISK-* / other rule)",
+    "Mitigation ID", "Source type", "Source ID(s)", "Risk ID",
+    "Source rule / HS ID (PROP-* / active RISK record(s) via RACT-01 / other rule)",
     "SEP ID", "Harm / issue addressed", "Fundamental right(s)", "Trigger / reason", "Measure", "Mitigation hierarchy",
     "Measure type", "Responsible role", "Owner", "Timing", "Requirement status", "Decision effect",
     "Evidence of implementation", "Verification method", "Closure criterion", "Status", "Risk before",
@@ -94,7 +95,7 @@ PHASES = {
 SEVERITY = {
     "0 — NONE": RuleSeverity.NONE, "1 — LOW": RuleSeverity.LOW, "2 — MEDIUM": RuleSeverity.MEDIUM,
     "3 — HIGH": RuleSeverity.HIGH, "4 — HARD STOP": RuleSeverity.HARD_STOP,
-    "By RISK-*": RuleSeverity.BY_RISK, "By source RISK-*": RuleSeverity.BY_RISK,
+    "By active RISK record": RuleSeverity.BY_RISK, "By source active RISK record": RuleSeverity.BY_RISK,
     "By source rule": RuleSeverity.BY_SOURCE_RULE,
 }  # fmt: skip
 SEVERITY_NA_RE = re.compile(r"^N/A(?:\s+—\s+.+)?$")
@@ -130,6 +131,8 @@ HS_HUMAN_GATE = "Sì se la regola richiede valutazione giuridica"
 MITIGATION_ALLOWED = {
     "YES": MitigationAllowed.YES, "NO": MitigationAllowed.NO, "CONDITIONAL": MitigationAllowed.CONDITIONAL,
     "N/A": MitigationAllowed.NOT_APPLICABLE, "YES BEFORE HS / NO ONCE MET": MitigationAllowed.BEFORE_HS_ONLY,
+    "YES BEFORE HS08 / NO override once HS08 fully met": MitigationAllowed.BEFORE_HS_ONLY,
+    "NO once non-remediable HS met": MitigationAllowed.NO,
 }  # fmt: skip
 TIMING = {
     "Before pilot/deployment if activated": MitigationTiming.BEFORE_DEPLOYMENT,
@@ -144,6 +147,7 @@ DECISION_EFFECT = {
     "None until evidence gap is resolved": DecisionEffect.NONE_UNTIL_EVIDENCE_GAP_RESOLVED,
 }
 SEP_HUMAN_REVIEW = {"Possible": HumanGateRequirement.POSSIBLE, "No": HumanGateRequirement.NO}
+MITIGATION_CANDIDATE = "NOT ACTIVATED — CANDIDATE"
 
 
 class ExportError(Exception):
@@ -543,7 +547,7 @@ def read_mitigations(wb) -> list[dict[str, Any]]:
                 "evidence_of_implementation": text(row[17]),
                 "verification_method": text(row[18]),
                 "closure_criterion": text(row[19]),
-                "status": parse(MitigationStatus, text(row[20])),
+                "candidate_status": lookup({MITIGATION_CANDIDATE: MITIGATION_CANDIDATE}, row[20], f"{mid} status"),
                 "risk_before": parse(RiskLevel, before) if before else None,
                 "expected_residual_text": text(row[22]),
                 "actual_residual": parse(RiskLevel, actual) if actual else None,
@@ -565,7 +569,7 @@ def read_sep(wb) -> dict[str, Any]:
     ws = wb["04A_SEP"]
     hdr = find_header(ws, SEP_HEADERS)
     fields = []
-    for row in data_rows(ws, hdr, 0, r"^SEP\d{2}$"):
+    for row in data_rows(ws, hdr, 0, r"^SEP\d{2}A?$"):
         fid = text(row[0])
         fields.append(
             {
@@ -620,6 +624,9 @@ def build(workbook: Path) -> ConfigBundle:
         "generated_by": "tools/export_workbook.py",
     }
     wb = openpyxl.load_workbook(workbook, data_only=True, read_only=False)
+    freeze = text(wb["08_FREEZE_REVIEW"].cell(1, 1).value) if "08_FREEZE_REVIEW" in wb.sheetnames else None
+    if not freeze or FREEZE_MARK not in freeze:
+        raise ExportError(f"{workbook.name}: not the {WORKBOOK_VERSION} frozen workbook (08_FREEZE_REVIEW!A1 = {freeze!r})")
     options = load_encoding("options.yaml")
     q_enc = load_encoding("questions.yaml")
     r_enc = load_encoding("rules.yaml")

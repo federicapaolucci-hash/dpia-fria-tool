@@ -58,7 +58,7 @@ QUESTION_ID_RE = re.compile(r"^(?:C\d{2}B?|N\d{2}|W\d{2}|Q\d{2}|FOLLOW|P\d{2}|D\
 RULE_ID_RE = re.compile(r"^(?:HS0[1-9]|RMS-9[A-Z]|FRIA-27[A-Z]|[A-Z]+-\d{2})$")
 RISK_ID_RE = re.compile(r"^RISK-\d{2}$")
 MITIGATION_ID_RE = re.compile(r"^MIT-\d{3}$")
-SEP_FIELD_ID_RE = re.compile(r"^SEP\d{2}$")
+SEP_FIELD_ID_RE = re.compile(r"^SEP\d{2}A?$")
 GOVERNANCE_ID_RE = re.compile(r"^G\d{2}$")
 ELEMENT_ID_RE = re.compile(r"^(?:HS0[1-9]|RMS-9[A-Z]|FRIA-27[A-Z]|[A-Z]+-\d{2})\.E\d+$")
 
@@ -105,7 +105,7 @@ class NotOf(_Spec):
 
 
 class AnswerIs(_Spec):
-    """Answer state (or enum value for ROLE / RISK_RATING / SINGLE / NOTIFICATION) is one of ``is``."""
+    """Answer state (or enum value for ROLE / RISK_RATING / SINGLE / NOTIFICATION / EFFECTIVENESS) is one of ``is``."""
 
     q: QuestionId
     is_: list[str] = Field(alias="is", min_length=1)
@@ -452,7 +452,7 @@ class MitigationSpec(_Spec):
     measure: NonEmpty
     hierarchy: MitigationHierarchy
     measure_type: NonEmpty
-    responsible_role: NonEmpty
+    responsible_role: Literal["Provider", "Deployer", "Joint"]
     owner: NonEmpty
     timing: MitigationTiming
     timing_text: NonEmpty
@@ -462,7 +462,7 @@ class MitigationSpec(_Spec):
     evidence_of_implementation: NonEmpty
     verification_method: NonEmpty
     closure_criterion: NonEmpty
-    status: MitigationStatus
+    candidate_status: Literal["NOT ACTIVATED — CANDIDATE"]  # 05A: inactive until triggered (AS-022)
     risk_before: RiskLevel | None = None
     expected_residual_text: NonEmpty
     actual_residual: RiskLevel | None = None  # must stay empty until verified reassessment

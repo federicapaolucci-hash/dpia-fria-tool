@@ -102,7 +102,7 @@ def test_assessment_state_keys_must_match_ids():
     with pytest.raises(ValidationError):
         AssessmentState(
             assessment_id="a1",
-            workbook_version="T17-REV2",
+            workbook_version="T17-v1.0.1",
             answers={"C46": Answer(question_id="C47", state="YES")},
         )
 
@@ -119,7 +119,7 @@ def _event(**overrides):
         event_id="e1",
         assessment_id="a1",
         run_id="r1",
-        workbook_version="T17-REV2",
+        workbook_version="T17-v1.0.1",
         timestamp=datetime(2026, 10, 7, tzinfo=timezone.utc),
         module="RULE",
         rule_id="SCR-01",

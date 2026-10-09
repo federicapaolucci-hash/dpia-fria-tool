@@ -3,7 +3,7 @@
 # Answers: a bare YES/NO/UNKNOWN/N_A/NOT_OWNED is the answer state; anything else is the value.
 
 assessment_id: FIXTURE
-workbook_version: T17-REV2
+workbook_version: T17-v1.0.1
 
 answers:
   # INTRO
@@ -29,7 +29,7 @@ answers:
   N02: "YES"
   C46: "YES"
   C47: [HUMAN_IN_THE_LOOP, OVERRIDE_POWER]
-  C48: LOW
+  C48: {value: VERIFIED_EFFECTIVE, detail: "Override audit Q2-2026: 14% of rankings changed by recruiters"}
   C50: "YES"
   C51: "YES"
   C52: [COMPLAINT_CHANNEL, HUMAN_REVIEW_ON_REQUEST]
@@ -51,7 +51,7 @@ answers:
   C23: "Deleted 6 months after the end of the selection"
   C41: "YES"
   C42: [ACCURACY_CHECK, REPRESENTATIVENESS]
-  C43: LOW
+  C43: {value: VERIFIED_EFFECTIVE, detail: "Accuracy and representativeness test report TR-2026-03"}
   C44: "YES"
   C28: "YES"
   C29: [ACCESS, RECTIFICATION, OBJECTION]
@@ -59,7 +59,7 @@ answers:
   C32: "Manual screening of all CVs was assessed and excluded for volume; keyword filters were less accurate"
   C33: "Interference limited to ranking; human decision, contestation and deletion keep impact low"
   Q16: "YES"
-  C34: MODERATE
+  C34: {value: MODERATE, detail: "DPIA-2026-04, section 6"}
   C35: "NO"
 
 # Reviewer checks: all done, no deficiency found.

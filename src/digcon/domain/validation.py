@@ -15,11 +15,11 @@ from typing import Literal
 from .enums import (
     ORDINAL,
     AnswerKind,
+    ControlEffectiveness,
     DecisionEffect,
     MitigationTiming,
     EncodingKind,
     HumanGateRequirement,
-    MitigationStatus,
     NotificationStatus,
     Phase,
     PropStatus,
@@ -56,16 +56,16 @@ from .models import (
 
 Level = Literal["ERROR", "WARN", "INFO"]
 
-# Workbook REV 2 in numbers. A mismatch means the export read the wrong rows.
+# Workbook v1.0.1 in numbers. A mismatch means the export read the wrong rows.
 EXPECTED_PHASES = {Phase.INTRO: 7, Phase.WHAT: 7, Phase.HOW: 14, Phase.WHY: 25, Phase.PROVIDER: 10, Phase.DEPLOYER: 11}
 EXPECTED_RULE_FAMILIES = {
-    "PROP": 12, "RMS": 10, "HS": 9, "FRIA": 6, "FLOW": 5, "OUT": 5, "SEP": 4, "MIT": 4, "SCR": 3,
+    "PROP": 12, "RMS": 10, "FRIA": 10, "HS": 9, "FLOW": 5, "OUT": 5, "SEP": 4, "MIT": 4, "SCR": 3,
     "SYS": 3, "CROSS": 2, "EG": 1, "QUAL": 1, "ROLE": 1, "SCOPE": 1, "LEGAL": 1, "DATA": 1,
-    "DQ": 1, "BIAS": 1, "TRANS": 1, "REM": 1,
+    "DQ": 1, "BIAS": 1, "TRANS": 1, "REM": 1, "RSEL": 1, "RACT": 1,
 }  # fmt: skip
 EXPECTED_RISKS = 11
 EXPECTED_MITIGATIONS = 50
-EXPECTED_SEP_FIELDS = 14
+EXPECTED_SEP_FIELDS = 15
 HARD_STOPS = [f"HS0{i}" for i in range(1, 10)]
 # PROP rules that return a PropStatus (PROP-11). PROP-00/-08/-11 are system / loop rules.
 PROP_WITH_STATUS = ["PROP-01", "PROP-02", "PROP-03", "PROP-04", "PROP-05", "PROP-06", "PROP-07", "PROP-09", "PROP-10"]
@@ -326,6 +326,8 @@ class _Validator:
             allowed |= set(RiskLevel.__members__)
         elif q.kind is AnswerKind.NOTIFICATION:
             allowed |= set(NotificationStatus.__members__)
+        elif q.kind is AnswerKind.EFFECTIVENESS:
+            allowed |= set(ControlEffectiveness.__members__)
         elif q.kind in (AnswerKind.SINGLE, AnswerKind.MULTI) and q.option_set in self.option_sets:
             allowed |= {o.code for o in self.option_sets[q.option_set].options}
         return allowed
@@ -374,8 +376,6 @@ class _Validator:
                 self.add("ERROR", "INVARIANT-MIT", m.id, "actual residual risk set before verified reassessment")
             if m.timing is MitigationTiming.DURING_DEPLOYMENT_CONTINUOUS and m.decision_effect is DecisionEffect.REQUIRED_BEFORE_DEPLOYMENT:
                 self.add("WARN", "MIT-TIMING", m.id, "timing 'during pilot/deployment' but decision effect 'required before pilot/deployment'")
-            if m.status is not MitigationStatus.PROPOSED:
-                self.add("WARN", "MIT-STATUS", m.id, f"pre-populated status {m.status.value}, expected PROPOSED")
 
     def check_sep(self) -> None:
         for f in self.b.sep.fields:
@@ -434,6 +434,6 @@ class _Validator:
         if self.registered is None:
             return
         for as_id in sorted(self.used_assumptions - self.registered):
-            self.add("ERROR", "ASSUMPTION", as_id, "used in config but not registered in ANOMALIE_REV2.md")
+            self.add("ERROR", "ASSUMPTION", as_id, "used in config but not registered in ANOMALIE.md")
         for as_id in sorted(self.registered - self.used_assumptions):
             self.add("INFO", "ASSUMPTION", as_id, "registered, not referenced by config (engine/UI level)")

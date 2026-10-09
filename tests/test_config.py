@@ -11,7 +11,7 @@ from digcon.domain.enums import ORDINAL, Probability, Reversibility, RiskLevel, 
 from digcon.domain.validation import validate_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKBOOK = ROOT.parent / "spec" / "DIGCON_T17_DECISION_ENGINE_REV_2.xlsx"
+WORKBOOK = ROOT.parent / "spec" / "DIGCON_T17_DECISION_ENGINE.xlsx"
 
 
 @pytest.fixture(scope="module")
@@ -25,16 +25,16 @@ def known_findings():
 
 
 def test_version(cfg):
-    assert cfg.version == "T17-REV2"
+    assert cfg.version == "T17-v1.0.1"
 
 
 def test_workbook_in_numbers(cfg):
     phases = Counter(q.phase.value for q in cfg.questions.questions)
     assert phases == {"INTRO": 7, "WHAT": 7, "HOW": 14, "WHY": 25, "PROVIDER": 10, "DEPLOYER": 11}
-    assert len(cfg.rules.rules) == 73
+    assert len(cfg.rules.rules) == 79  # 73 of REV 2 + FRIA-27G–J + RSEL-01 + RACT-01 (ANOMALIE A9)
     assert len(cfg.risks.risks) == 11
     assert len(cfg.mitigations.mitigations) == 50
-    assert len(cfg.sep.fields) == 14
+    assert len(cfg.sep.fields) == 15  # SEP00–SEP13 + SEP04A
     assert [g.id for g in cfg.questions.governance_fields] == ["G01", "G02", "G03", "G04", "G05"]
 
 
@@ -70,10 +70,11 @@ def test_hard_stops_have_required_gate_and_non_remediability(cfg):
         assert " AND ".join(e.text for e in hs.encoding.elements) == hs.trigger_text.replace("  ", " ")
 
 
-def test_prepopulated_mitigations_are_proposed_without_residual(cfg):
+def test_prepopulated_mitigations_are_inactive_candidates_without_residual(cfg):
     for m in cfg.mitigations.mitigations:
-        assert m.status.value == "PROPOSED"
+        assert m.candidate_status == "NOT ACTIVATED — CANDIDATE"
         assert m.actual_residual is None
+    assert {m.responsible_role for m in cfg.mitigations.mitigations} == {"Provider", "Deployer", "Joint"}
 
 
 EXPECTED_MATRIX = {

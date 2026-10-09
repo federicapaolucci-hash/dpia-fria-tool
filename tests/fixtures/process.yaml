@@ -1,4 +1,4 @@
-# 07_TEST_FIXTURES — SEP (2), Mitigation (3), Audit (2).
+# 07_TEST_FIXTURES — SEP (3), Mitigation (3), Audit (2).
 # Baseline outcome is O1: "no direct outcome effect" means the outcome stays O1.
 
 - id: SEP-T01
@@ -18,6 +18,17 @@
   expect:
     fired: [SEP-03]
     reassess: [RISK-21]
+    risk: {RISK-21: {initial: MODERATE, residual: null}}
+    outcome: O1
+
+- id: SEP-T03
+  workbook: "Stakeholder analysis complete, but the assessor/team position reveals a materially missing perspective relevant to the affected group"
+  patch:
+    sep:
+      decision: "YES"
+      texts:
+        SEP04A: "No candidate with a disability was involved in testing; organisations of persons with disabilities to be consulted"
+  expect:
     risk: {RISK-21: {initial: MODERATE, residual: null}}
     outcome: O1
 

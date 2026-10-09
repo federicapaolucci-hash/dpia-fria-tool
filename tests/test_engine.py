@@ -1,4 +1,4 @@
-"""The 44 fixtures of 07_TEST_FIXTURES plus the engine invariants of the workbook."""
+"""The 46 fixtures of 07_TEST_FIXTURES plus the engine invariants of the workbook."""
 
 from datetime import datetime, timezone
 
@@ -17,9 +17,9 @@ ALL_FIXTURES = [f for name in FIXTURE_FILES for f in load_yaml(name)]
 ENGINE_FIXTURES = [f for f in ALL_FIXTURES if "special" not in f]
 
 
-def test_all_44_workbook_fixtures_are_translated():
+def test_all_46_workbook_fixtures_are_translated():
     ids = [f["id"] for f in ALL_FIXTURES]
-    assert len(ids) == len(set(ids)) == 44
+    assert len(ids) == len(set(ids)) == 46
 
 
 @pytest.mark.parametrize("fx", ENGINE_FIXTURES, ids=lambda f: f["id"])
@@ -92,7 +92,7 @@ def test_every_applied_rule_has_a_complete_audit_event():
     events = {e.rule_id: e for e in r.audit_trail if e.rule_id}
     assert applied <= set(events)
     for e in r.audit_trail:
-        assert e.workbook_version == "T17-REV2" and e.evidence_refs, e
+        assert e.workbook_version == "T17-v1.0.1" and e.evidence_refs, e
     assert r.audit_trail[-1].module.value == "OUTCOME" and r.audit_trail[-1].engine_output.startswith(r.outcome.value)
 
 
@@ -323,9 +323,9 @@ DEPLOYER_ANSWERS = {
     "D04": ["RISK-21"],
     "D05": "Recruiter reviews every ranked list; override logged; escalation to HR lead",
     "D06": "Complaint channel via HR mailbox, review within 10 days, owner: HR lead",
-    "D07": "NO", "D08": "NO", "D09": "DPIA-2026-04 sections 2-5", "D10": "NOT_REQUIRED",
+    "D07": "NO", "D08": "NO", "D09": "DPIA-2026-04 sections 2-5", "D10": "DONE",
 }
-FRIA_CHECKS = {"FRIA-27A.E1": "NOT_MET", "FRIA-27D.E1": "NOT_MET", "FRIA-27E.E1": "NOT_MET", "FRIA-27F.E1": "NOT_MET"}
+FRIA_CHECKS = {"FRIA-27A.E1": "NOT_MET", "FRIA-27D.E1": "NOT_MET", "FRIA-27E.E1": "NOT_MET", "FRIA-27F.E1": "NOT_MET", "FRIA-27I.E1": "NOT_MET"}
 
 
 @pytest.mark.parametrize(
@@ -342,3 +342,73 @@ def test_complete_assessment_per_role(role, answers, elements, provider, deploye
     assert r.evidence_gaps == [], r.evidence_gaps
     assert r.outcome is Outcome.O1
     assert r.closed
+
+
+# --- v1.0.1: control effectiveness, imported assessments, FRIA-27G–J, RSEL-01 -----------
+
+
+@pytest.mark.parametrize("qid", ["C43", "C48"])
+def test_ineffective_control_requires_remediation(qid):
+    r = run({"answers": {qid: "INEFFECTIVE"}})
+    assert r.prop_statuses["PROP-06"].value == "REMEDIATION_REQUIRED"
+    assert r.outcome is Outcome.O3
+
+
+@pytest.mark.parametrize("value", ["NOT_VERIFIED", "UNKNOWN"])
+@pytest.mark.parametrize("qid", ["C43", "C48"])
+def test_unverified_control_effectiveness_is_a_material_gap(qid, value):
+    r = run({"answers": {qid: value}})
+    assert r.outcome is Outcome.O4
+    assert r.risks["RISK-21"].residual is None  # never assumed lower
+
+
+def test_no_prior_assessment_is_n_a_not_a_gap():
+    r = run({"answers": {"C34": "N_A", "C35": "N_A"}})
+    assert r.prop_statuses["PROP-01"].value == "SUPPORTED"
+    assert r.evidence_gaps == [] and r.outcome is Outcome.O1
+
+
+def test_imported_high_rating_raises_scrutiny_only():
+    r = run({"answers": {"C34": "HIGH"}})
+    assert r.rules["PROP-07"].fired and "SCRUTINY" in {e.value for e in r.rules["PROP-07"].effects}
+    assert r.outcome is Outcome.O1
+    assert r.risks["RISK-21"].initial.value == "MODERATE"  # imported rating does not override the register
+
+
+DEPLOYER_OPEN = {"FOLLOW": "YES", **{k: v for k, v in DEPLOYER_ANSWERS.items() if k != "FOLLOW"}}
+
+
+def _fria(answers=None, elements=None):
+    return run({"answers": {**DEPLOYER_OPEN, **(answers or {})}, "elements": {**FRIA_CHECKS, **(elements or {})}})
+
+
+def test_fria_baseline_deployer_is_o1():
+    assert _fria().outcome is Outcome.O1
+
+
+@pytest.mark.parametrize(
+    ("answers", "elements", "expected"),
+    [
+        ({"D10": "TO_DO"}, {}, Outcome.O3),  # FRIA-27J: notification still to do
+        ({"D10": "EXEMPT_ART46_1"}, {}, Outcome.O1),
+        ({"D10": "UNKNOWN"}, {}, Outcome.O4),
+        ({"D08": "YES"}, {}, Outcome.O3),  # FRIA-27H: Art. 27(1) element changed -> update
+        ({"D07": "YES"}, {}, Outcome.O1),  # reliance recorded, comparability still to verify (non-blocking)
+        ({"D07": "YES"}, {"FRIA-27G.E1": "MET"}, Outcome.O4),  # not comparable / no reference
+        ({}, {"FRIA-27I.E1": "MET"}, Outcome.O4),  # DPIA cross-reference inadequate
+    ],
+)
+def test_fria_27g_to_27j(answers, elements, expected):
+    r = _fria(answers, elements)
+    assert r.outcome is expected, _explain(r)
+    assert not any(h.opened for h in r.hard_stops.values())
+
+
+def test_rsel01_harm_identified_without_any_risk_in_the_register_is_a_gap():
+    state = build_state({"answers": {"C41": "NO"}})  # DQ-01: risk input
+    state.risks = {}
+    r = run_engine(default_config(), state, CTX)
+    assert r.rules["RSEL-01"].fired and r.rules["RSEL-01"].gap
+    assert any(f.rule_id == "RSEL-01" for f in r.evidence_gaps)
+    r = run({"answers": {"C41": "NO"}})  # RISK-21 in the register: selector satisfied
+    assert r.rules["RSEL-01"].fired and not r.rules["RSEL-01"].gap

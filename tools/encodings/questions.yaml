@@ -1,7 +1,7 @@
 # Hand-coded structure of the questions in sheets 01 / 02 / 03.
 # Text, IDs, visibility prose and rule references come from the workbook; this file only
 # adds what the workbook leaves in prose. Every non-obvious choice cites an AS-* entry
-# of spec/ANOMALIE_REV2.md.
+# of spec/ANOMALIE.md.
 
 # 'Modello risposta' (exact workbook text) -> answer kind + offered states.
 # Closed questions offer the states their model names (AS-010).
@@ -15,8 +15,11 @@ response_models:
   "YES/NO/UNKNOWN": {kind: STATE, states: [YES, NO, UNKNOWN]}
   "YES/NO + reference": {kind: STATE, states: [YES, NO, UNKNOWN]}
   "ENUM: PROVIDER / DEPLOYER / JOINT / UNKNOWN": {kind: ROLE, states: [UNKNOWN]}
-  "RISK RATING: VERY LOW / LOW / MODERATE / HIGH / VERY HIGH / UNKNOWN + evidence status": {kind: RISK_RATING, states: [UNKNOWN]}
-  "NOT REQUIRED / TO DO / DONE + reference": {kind: NOTIFICATION, states: [UNKNOWN]}
+  # C34: imported prior assessment; N_A when none applies (sheet 01, visibility column) — AS-033.
+  "EXISTING RISK ASSESSMENT / RATING + evidence reference + evidence status": {kind: RISK_RATING, states: [UNKNOWN, N_A]}
+  "YES / NO / UNKNOWN / N_A + evidence reference": {kind: STATE, states: [YES, NO, UNKNOWN, N_A]}
+  "TO DO / DONE / EXEMPT_ART46_1 / UNKNOWN + reference": {kind: NOTIFICATION, states: [UNKNOWN]}
+  "EVIDENCE + effectiveness status: VERIFIED EFFECTIVE / INEFFECTIVE / NOT VERIFIED / UNKNOWN": {kind: EFFECTIVENESS, states: [UNKNOWN]}
   "MULTI + UNKNOWN / N/A / NOT_OWNED": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
   "ENUM / MULTI + legal reference + evidence status": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
   "MULTI + vulnerabilità / protected characteristics": {kind: MULTI, states: [UNKNOWN, N_A, NOT_OWNED]}
@@ -29,7 +32,7 @@ response_models:
   "Durata + frequenza + eventuale pilot scope": {kind: TEXT, states: [UNKNOWN, N_A, NOT_OWNED]}
   "REFERENCE / document + evidence status": {kind: REFERENCE, states: [UNKNOWN, N_A, NOT_OWNED]}
   "Cross-reference a DPIA / LED DPIA": {kind: REFERENCE, states: [UNKNOWN, N_A, NOT_OWNED]}
-  "Una o più righe RISK-*": {kind: RISK_ROWS, states: [UNKNOWN, N_A, NOT_OWNED]}
+  "One or more concrete RISK IDs from the approved DIGCON catalogue, selected via RSEL-01": {kind: RISK_ROWS, states: [UNKNOWN, N_A, NOT_OWNED]}
 
 # Re-used conditions (YAML anchors only; the exporter writes them out in full).
 _shared:
@@ -56,6 +59,10 @@ questions:
   C29: {option_set: DATA_SUBJECT_RIGHTS, assumptions: [AS-001, AS-009]}
   Q22: {option_set: LEGAL_BASES, assumptions: [AS-001, AS-009]}
   Q23: {assumptions: [AS-009]}  # MULTI without any option list -> structured text
+  C34: {assumptions: [AS-033]}
+  C35: {assumptions: [AS-033]}
+  C43: {assumptions: [AS-034]}
+  C48: {assumptions: [AS-034]}
 
   # --- visibility (add-on questions also carry their option/state assumptions) ---
   C56:

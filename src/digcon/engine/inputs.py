@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from digcon.domain.enums import AnswerKind, NotificationStatus, PropStatus, RiskLevel, Role
+from digcon.domain.enums import AnswerKind, ControlEffectiveness, NotificationStatus, PropStatus, RiskLevel, Role
 from digcon.domain.models import RISK_ID_RE, AssessmentState, ConfigBundle, QuestionSpec
 
 
@@ -19,6 +19,8 @@ def _codes(cfg: ConfigBundle, q: QuestionSpec) -> set[str]:
         return {r.value for r in RiskLevel}
     if q.kind is AnswerKind.NOTIFICATION:
         return {n.value for n in NotificationStatus}
+    if q.kind is AnswerKind.EFFECTIVENESS:
+        return {e.value for e in ControlEffectiveness}
     if q.kind in (AnswerKind.SINGLE, AnswerKind.MULTI):
         return {o.code for os_ in cfg.questions.option_sets if os_.id == q.option_set for o in os_.options}
     return set()
@@ -56,7 +58,7 @@ def check_state(cfg: ConfigBundle, state: AssessmentState) -> list[str]:
                 bad = sorted(set(ans.value) - _codes(cfg, q))
                 if bad:
                     errors.append(f"{qid}: unknown options {bad}")
-        elif q.kind in (AnswerKind.SINGLE, AnswerKind.ROLE, AnswerKind.RISK_RATING, AnswerKind.NOTIFICATION):
+        elif q.kind in (AnswerKind.SINGLE, AnswerKind.ROLE, AnswerKind.RISK_RATING, AnswerKind.NOTIFICATION, AnswerKind.EFFECTIVENESS):
             if not isinstance(ans.value, str) or ans.value not in _codes(cfg, q):
                 errors.append(f"{qid}: {ans.value!r} is not one of {sorted(_codes(cfg, q))}")
         elif q.kind is AnswerKind.RISK_ROWS:

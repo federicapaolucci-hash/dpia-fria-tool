@@ -208,14 +208,25 @@ class AnswerKind(_Closed):
     MULTI = "MULTI"  # options from a closed option set
     ROLE = "ROLE"  # Role enum
     RISK_RATING = "RISK_RATING"  # RiskLevel
-    RISK_ROWS = "RISK_ROWS"  # one or more RISK-* rows (D04)
+    RISK_ROWS = "RISK_ROWS"  # one or more concrete RISK-* ids selected via RSEL-01 (D04)
     NOTIFICATION = "NOTIFICATION"  # NotificationStatus (D10)
+    EFFECTIVENESS = "EFFECTIVENESS"  # ControlEffectiveness + evidence (C43, C48)
 
 
 class NotificationStatus(_Closed):
-    NOT_REQUIRED = "NOT_REQUIRED"
+    """D10, Art. 27(3): notification of the FRIA results to the market surveillance authority."""
+
     TO_DO = "TO_DO"
     DONE = "DONE"
+    EXEMPT_ART46_1 = "EXEMPT_ART46_1"
+
+
+class ControlEffectiveness(_Closed):
+    """Effectiveness status of a control against the harm scenario(s) (C43, C48). UNKNOWN is the answer state."""
+
+    VERIFIED_EFFECTIVE = "VERIFIED_EFFECTIVE"
+    INEFFECTIVE = "INEFFECTIVE"
+    NOT_VERIFIED = "NOT_VERIFIED"
 
 
 class SepDecision(_Closed):
@@ -292,11 +303,12 @@ class ElementSource(_Closed):
 
 
 class EngineFlag(_Closed):
-    """Aggregate engine states computed over all rule results (definitions: AS-013, AS-016, AS-022, AS-023)."""
+    """Aggregate engine states computed over all rule results (definitions: AS-013, AS-016, AS-022, AS-023, AS-032)."""
 
     VISIBLE_QUESTION_UNRESOLVED = "VISIBLE_QUESTION_UNRESOLVED"
     VISIBLE_QUESTION_NOT_APPLICABLE = "VISIBLE_QUESTION_NOT_APPLICABLE"
     REMEDIATION_TRIGGERED = "REMEDIATION_TRIGGERED"
+    RISK_INPUT_TRIGGERED = "RISK_INPUT_TRIGGERED"
     HS_MET = "HS_MET"
     MATERIAL_EVIDENCE_GAP = "MATERIAL_EVIDENCE_GAP"
     OPEN_REQUIRED_REMEDIATION = "OPEN_REQUIRED_REMEDIATION"
@@ -335,8 +347,10 @@ _LABELS: dict[Enum, str] = {
     Reversibility.DIFFICULT_TO_REVERSE: "DIFFICULT TO REVERSE",
     Probability.VERY_LIKELY: "VERY LIKELY",
     SepDecision.TO_ASSESS: "TO ASSESS",
-    NotificationStatus.NOT_REQUIRED: "NOT REQUIRED",
     NotificationStatus.TO_DO: "TO DO",
+    NotificationStatus.EXEMPT_ART46_1: "EXEMPT (Art. 46(1))",
+    ControlEffectiveness.VERIFIED_EFFECTIVE: "VERIFIED EFFECTIVE",
+    ControlEffectiveness.NOT_VERIFIED: "NOT VERIFIED",
     RuleSeverity.HARD_STOP: "HARD STOP",
 }
 
