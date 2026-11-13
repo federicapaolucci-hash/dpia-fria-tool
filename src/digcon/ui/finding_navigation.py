@@ -7,6 +7,8 @@ from .labels import MITIGATION_TITLE, RESULT_TITLE
 
 
 def open_finding(rule_id):
+    st.session_state.pop('w.plan.selected_group', None)
+    st.session_state.pop('w.plan.selected_finding', None)
     st.session_state['plan_focus'] = rule_id
     st.session_state['w.plan_view'] = 'Your action plan'
     st.session_state.pop('finding_source', None)
