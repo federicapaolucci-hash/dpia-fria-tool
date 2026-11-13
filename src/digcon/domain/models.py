@@ -679,6 +679,8 @@ class GovernanceRecord(_State):
 class ActionPlanItem(_State):
     """Work record; progress alone never closes an engine finding."""
     rule_id: RuleId
+    shared_action_id: str = ""
+    shared_history: list[dict] = []
     action: str = ""
     rationale: str = ""
     owner: str = ""

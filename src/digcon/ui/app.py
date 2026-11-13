@@ -160,8 +160,9 @@ def _progress(cfg, res: EngineResult | None) -> tuple[dict[str, str], dict[str, 
     marks[RULES_TITLE] = (f":gray-badge[{len(res.verification_requests)} to verify]" if res.verification_requests
                           else ":green-badge[:material/check: Nothing to verify]")
     marks[MITIGATION_TITLE] = f":gray-badge[{sum(1 for m in store['mitigations'].values() if m.get('activated'))} activated]"
-    opened = sum(1 for h in res.hard_stops.values() if h.opened)
-    marks[REVIEW_TITLE] = f":orange-badge[{opened} open]" if opened else ":gray-badge[None open]"
+    from digcon.domain.review_progress import stop_progress
+    opened = sum(stop_progress(h)[1] for h in res.hard_stops.values())
+    marks[REVIEW_TITLE] = f":orange-badge[{opened} need attention]" if opened else ":gray-badge[No pending stop checks]"
     marks[RESULT_TITLE] = f":{OUTCOME_COLOUR[res.outcome]}-badge[{res.outcome.value}]"
     marks[GOVERNANCE_TITLE] = ":green-badge[Recorded]" if store["governance"].get("g01_decision") else ":gray-badge[To record]"
     return {k: v for k, v in marks.items() if v}, counts

@@ -11,6 +11,8 @@ from digcon.engine import EngineResult
 from .. import renderer, state
 from ..labels import workbook_text
 from digcon.domain.action_plan import title
+from digcon.domain.review_progress import stop_progress
+from ..review_language import PROBLEMS, FACTS
 
 
 def render_hard_stops(cfg: ConfigBundle, result: EngineResult) -> None:
@@ -22,15 +24,26 @@ def render_hard_stops(cfg: ConfigBundle, result: EngineResult) -> None:
     )
     st.caption("Colours concern individual checks, not permission to proceed. Blue identifies a neutral fact; "
                "green means only that the particular problem was not identified.")
-    for hs_id, hs in result.hard_stops.items():
+    pending = sum(stop_progress(hs)[1] for hs in result.hard_stops.values())
+    st.caption(f"{pending} stop checks need attention")
+    show_all = st.checkbox("Show completed and unopened checks", key="w.hs.show_all")
+    ordered = sorted(result.hard_stops.items(), key=lambda pair: not stop_progress(pair[1])[1])
+    for hs_id, hs in ordered:
         spec = cfg.rule(hs_id)
-        if hs.state is RuleElementState.MET:
-            status = "🔴 Stop condition confirmed" if not hs.awaiting_legal_review else "🟡 Legal decision needed"
-        elif hs.opened:
-            status = "🟡 Review in progress"
-        else:
-            status = "⚪ Not opened"
-        with st.expander(f"{title(hs_id)} · {status}", expanded=hs.opened):
+        status, needs_attention = stop_progress(hs)
+        if not needs_attention and not show_all:
+            continue
+        with st.expander(f"{title(hs_id)} · {status}", expanded=needs_attention):
+            if hs.state is RuleElementState.UNCERTAIN:
+                uncertain = [eid for eid, value in hs.elements.items() if value is RuleElementState.UNCERTAIN]
+                if uncertain:
+                    st.markdown("**Information to establish:**")
+                    for eid in uncertain:
+                        st.write("• " + PROBLEMS.get(eid, FACTS.get(eid, eid)))
+                if hs.gate.value != "COMPLETED":
+                    st.caption("Next: assess the facts and record the reasoned reviewer decision below.")
+                else:
+                    st.caption("The review is recorded, but the facts above remain uncertain. Update their evidence before concluding.")
             with st.expander("Technical rule details"):
                 st.caption(f"{hs_id}: {workbook_text(hs_id, 'trigger_text', spec.trigger_text)}")
                 st.caption(f"Remediability: {spec.remediability}")

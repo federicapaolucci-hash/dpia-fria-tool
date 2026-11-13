@@ -111,7 +111,7 @@ def findings(result, saved):
             if kind not in entry['kinds']: entry['kinds'].append(kind)
             entry['ids'] = sorted(set(entry['ids']) | set(f.ids))
     for rid, hs in result.hard_stops.items():
-        if hs.opened:
+        if hs.opened and hs.state.value != 'NOT_MET':
             grouped.setdefault(rid, {'kinds': [], 'ids': []})['kinds'].append('Stop condition: legal review')
     for rid in saved:
         grouped.setdefault(rid, {'kinds': ['Saved work — check current assessment'], 'ids': []})
@@ -124,7 +124,7 @@ def fingerprint(state, rule_id):
     if data.get('alternatives_review') is None:
         data.pop('alternatives_review', None)  # preserve signatures on legacy records
     item = data.pop('action_plan', {}).get(rule_id, {})
-    for key in ['reviewed_fingerprint', 'decision', 'review_history']:
+    for key in ['reviewed_fingerprint', 'decision', 'review_history', 'shared_action_id', 'shared_history']:
         item.pop(key, None)
     for key in ['governance', 'api_suggestions', 'assessment_id', 'residual_reviews']:
         data.pop(key, None)
@@ -150,3 +150,51 @@ def residual_approved(state, risk_id):
                               review.evidence_refs, review.mitigation_ids]):
         return False
     return review.reviewed_fingerprint == fingerprint(state, risk_id)
+
+
+SHARED_FIELDS = ('action', 'owner', 'due_date', 'implementation', 'evidence_refs')
+
+
+def share_action(state, rule_ids, values, group_id):
+    """Explicitly group work; preserve earlier shared text and every per-finding decision.
+
+    Stored per-finding records remain the engine/report contract. Shared edits are
+    propagated to all members; their changed evidence invalidates prior approvals.
+    """
+    from digcon.domain.models import ActionPlanItem
+    if not rule_ids or any(r.startswith('HS') for r in rule_ids):
+        raise ValueError('Select non-stop findings for this action.')
+    members = set(rule_ids)
+    for rid in rule_ids:
+        old = state.action_plan.get(rid)
+        if old and old.shared_action_id:
+            members.update(k for k, v in state.action_plan.items() if v.shared_action_id == old.shared_action_id)
+    for rid in members:
+        item = state.action_plan.get(rid, ActionPlanItem(rule_id=rid))
+        previous = {f: getattr(item, f) for f in SHARED_FIELDS}
+        changed = any(previous[f] != values[f] for f in SHARED_FIELDS)
+        if changed and any(previous.values()):
+            item.shared_history.append(previous)
+        for field in SHARED_FIELDS:
+            setattr(item, field, values[field])
+        item.shared_action_id = group_id
+        state.action_plan[rid] = item
+    return state
+
+
+def next_step(item, is_approved=False):
+    if is_approved:
+        return 'Resolution approved for this finding; other assessment conditions still apply.'
+    if item and item.decision == 'RESOLVED':
+        return 'Supporting information changed or approval is incomplete. Review this finding again.'
+    if not item or not item.action.strip() or not item.owner.strip():
+        return 'Describe the action and name its owner.'
+    if not item.due_date.strip():
+        return 'Add the target date.'
+    if not item.implementation.strip() or not item.evidence_refs:
+        return 'Plan recorded — implementation evidence is still needed. You may stop here while the action is only planned.'
+    if not all([item.verification_method.strip(), item.verification_result.strip(), item.verification_evidence]):
+        return 'Implementation recorded — verify effectiveness for this finding.'
+    if item.decision == 'OPEN':
+        return 'Reviewer kept this finding open. Address the recorded reasons before a new decision.'
+    return 'Record the finding-specific rationale and reviewer decision.'

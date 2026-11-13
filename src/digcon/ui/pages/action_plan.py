@@ -1,10 +1,10 @@
 """Finding-led operational plan, persisted with the assessment."""
 import streamlit as st
-from digcon.domain.action_plan import ACTIONS, approved, approval_ready, findings, fingerprint, title
+from digcon.domain.action_plan import ACTIONS, SHARED_FIELDS, approved, approval_ready, findings, fingerprint, title, next_step, share_action
 from digcon.domain.models import ActionPlanItem
 from .. import state
 from ..finding_navigation import open_source
-from ..labels import PHASE_TITLES, REVIEW_TITLE
+from ..labels import PHASE_TITLES, REVIEW_TITLE, RULES_TITLE, RESULT_TITLE
 
 FIELDS = {
     'action': 'What will be done?', 'rationale': 'How does this action address this problem?',
@@ -53,6 +53,16 @@ def _sync(rid):
         value = st.session_state[key]
         data[field] = [x.strip() for x in value.splitlines() if x.strip()] if field.endswith('evidence') or field == 'evidence_refs' else value
     state.store()['action_plan'][rid] = ActionPlanItem.model_validate(data).model_dump(mode='json')
+    group = data.get('shared_action_id')
+    if group:
+        current = state.assessment()
+        values = {f: getattr(current.action_plan[rid], f) for f in SHARED_FIELDS}
+        current = share_action(current, [rid], values, group)
+        state.store()['action_plan'] = {r: v.model_dump(mode='json') for r, v in current.action_plan.items()}
+        for other in current.action_plan:
+            if other != rid and current.action_plan[other].shared_action_id == group:
+                for field in SHARED_FIELDS:
+                    st.session_state.pop(f'w.plan.{other}.{field}', None)
 
 
 def _decide(rid, decision):
@@ -85,34 +95,144 @@ def _field(rid, field, stored):
     widget(FIELDS[field], key=key, on_change=_sync, args=(rid,), help=HELP[field])
 
 
+def _detach(rid):
+    st.session_state.pop('w.plan.selected_group', None)
+    st.session_state.pop('w.plan.selected_finding', None)
+    state.store()['action_plan'][rid]['shared_action_id'] = ''
+    st.session_state['plan_focus'] = rid
+
+
+def _select_group(grouped):
+    st.session_state['plan_focus'] = grouped[st.session_state['w.plan.selected_group']][0]
+    st.session_state.pop('w.plan.selected_finding', None)
+
+
+def _select_finding():
+    st.session_state['plan_focus'] = st.session_state['w.plan.selected_finding']
+
+
+def _source_links(cfg, result, rid, info, prefix):
+    qids = set(info['ids'])
+    if rid in result.rules:
+        qids.update(result.rules[rid].input_ids)
+    for q in cfg.questions.questions:
+        if q.id in qids:
+            st.button(q.text, key=f'{prefix}.{rid}.{q.id}', on_click=open_source,
+                      args=(rid, q.id, PHASE_TITLES[q.phase]))
+    st.button('Open reviewer checks', key=f'{prefix}.review.{rid}', on_click=state.go,
+              args=(REVIEW_TITLE if rid.startswith('HS') else RULES_TITLE,))
+
+
+def _group_form(cards, records):
+    candidates = [r for r in cards if not r.startswith('HS')]
+    if len(candidates) < 2:
+        return
+    with st.expander('Use one action for several findings'):
+        st.caption('Choose findings addressed by the same concrete intervention. Existing groups are included in full. '
+                   'Earlier action text is retained in history; each finding keeps its own rationale, verification and decision.')
+        with st.form('plan.group'):
+            selected = st.multiselect('Findings addressed', candidates, format_func=title)
+            action = st.text_area('Shared action')
+            owner = st.text_input('Shared owner')
+            due = st.text_input('Shared target date (YYYY-MM-DD)')
+            confirmed = st.checkbox('Replace the selected planning fields with this shared action; retain earlier text in history')
+            submitted = st.form_submit_button('Save shared action')
+        if submitted:
+            if len(selected) < 2 or not action.strip() or not owner.strip() or not confirmed:
+                st.warning('Select at least two findings, describe the action, name its owner and confirm the change.')
+            else:
+                # Do not merge different implementation evidence: users must reconcile it first.
+                current = state.assessment()
+                groups = {records[r].get('shared_action_id') for r in selected if r in records} - {None, ''}
+                members = set(selected) | {r for r, v in records.items() if v.get('shared_action_id') in groups}
+                implementations = {(records.get(r, {}).get('implementation', ''),
+                                    tuple(records.get(r, {}).get('evidence_refs', []))) for r in members}
+                nonempty = {v for v in implementations if v[0] or v[1]}
+                if nonempty and len(implementations) > 1:
+                    st.warning('These findings have different implementation records. Reconcile them individually before sharing the action; no records were changed.')
+                else:
+                    from uuid import uuid4
+                    implementation, evidence = next(iter(implementations))
+                    values = dict(action=action.strip(), owner=owner.strip(), due_date=due.strip(),
+                                  implementation=implementation, evidence_refs=list(evidence))
+                    share_action(current, selected, values, str(uuid4()))
+                    state.store()['action_plan'] = {r: v.model_dump(mode='json') for r, v in current.action_plan.items()}
+                    for key in list(st.session_state):
+                        if str(key).startswith('w.plan.'):
+                            del st.session_state[key]
+                    st.session_state['plan_focus'] = selected[0]
+                    st.rerun()
+
+
 def render(cfg, result):
-    st.markdown('**Your action plan, in four steps.** Open a problem and choose the step you need. '
-                'Saved work is included when you export the assessment and restored when you import it.')
-    for col, heading, description in zip(st.columns(4), STAGES, [
-        'Understand what needs attention.', 'Choose an action, an owner and a date.',
-        'Record what was done and its evidence.', 'Check effectiveness and review this problem.'
-    ]):
-        with col:
-            st.markdown('**' + heading + '**')
-            st.caption(description)
-    st.caption('A proposed or implemented action does not prove effectiveness. Verification does not automatically '
-               'close the problem. Residual risk requires a separate documented reassessment in Fundamental rights risks.')
+    st.markdown('**Your action plan.** Record the action, owner and target date first. '
+                'Implementation and verification can wait until evidence is available.')
+    st.caption('Planning does not resolve a finding. Save or export your assessment to keep this work.')
     if 'plan_message' in st.session_state: st.warning(st.session_state.pop('plan_message'))
     records = state.store().setdefault('action_plan', {})
     cards = findings(result, records)
-    st.caption(f'{len(cards)} work items · {sum(v.get("status") == "IN_PROGRESS" for v in records.values())} in progress · '
-               f'{sum(v.get("status") == "AWAITING_REVIEW" for v in records.values())} awaiting review')
-    focus = st.session_state.get('plan_focus')
-    if focus and focus not in cards:
-        st.info('The issue you were working on is no longer listed among the current findings. Return to 4.1 to review the updated assessment; this is not a separate reviewer approval.')
-    if not cards:
-        st.success('No open finding currently needs an action.')
+    gap_cards = {r: i for r, i in cards.items() if 'Information needed' in i['kinds']}
+    st.caption(f'{len(gap_cards)} findings need information · {len(result.open_remediations)} findings need corrective action')
+    if gap_cards:
+        with st.expander(f'Complete missing information ({len(gap_cards)})', expanded=st.session_state.get('plan_focus') in gap_cards):
+            st.caption('These gaps can keep the outcome at O4. Update the source answer or review; writing an action plan does not fill them.')
+            for rid, info in sorted(gap_cards.items(), key=lambda pair: pair[0] != st.session_state.get('plan_focus')):
+                st.markdown('**' + title(rid) + '**')
+                for finding in result.evidence_gaps:
+                    if finding.rule_id == rid:
+                        st.caption(finding.message)
+                _source_links(cfg, result, rid, info, 'gap.source')
+    include_saved = st.checkbox('Include saved plans without a current corrective action', key='w.plan.include_saved')
+    # Pure evidence/verification work is directed to the source, without a mitigation form.
+    work = {r: i for r, i in cards.items() if (include_saved and r in records) or any(k in i['kinds'] for k in
+            ['Corrective action needed', 'Ongoing condition', 'Stop condition: legal review'])}
+    active_groups = {records[r].get('shared_action_id') for r in work if r in records} - {None, ''}
+    work.update({r: cards[r] for r, v in records.items() if v.get('shared_action_id') in active_groups})
+    review_only = {r: i for r, i in cards.items() if r not in work and r not in gap_cards and i['kinds'] != ['Saved work — check current assessment']}
+    if review_only:
+        with st.expander(f'Checks and decisions to record ({len(review_only)})', expanded=st.session_state.get('plan_focus') in review_only):
+            for rid, info in review_only.items():
+                st.markdown('**' + title(rid) + '**')
+                _source_links(cfg, result, rid, info, 'check.source')
+    if not work:
+        st.caption('No corrective action currently needs a plan. Complete any information and checks listed above.')
         return
+    _group_form(work, records)
+    grouped = {}
+    for rid in work:
+        group = records.get(rid, {}).get('shared_action_id') or rid
+        grouped.setdefault(group, []).append(rid)
     focus = st.session_state.get('plan_focus')
+    group_ids = list(grouped)
+    focused_group = next((g for g, members in grouped.items() if focus in members), group_ids[0])
+    def group_label(g):
+        members = grouped[g]
+        text = records.get(members[0], {}).get('action') or title(members[0])
+        return text[:100] + (f' · {len(members)} findings' if len(members) > 1 else '')
+    if st.session_state.get('w.plan.selected_group') not in group_ids:
+        st.session_state['w.plan.selected_group'] = focused_group
+    group = st.selectbox('Choose an intervention', group_ids, key='w.plan.selected_group',
+                         format_func=group_label, on_change=_select_group, args=(grouped,))
+    members = grouped[group]
+    if len(members) > 1:
+        st.caption('Shared action, owner, target date and implementation evidence. Review each linked finding separately.')
+    if st.session_state.get('w.plan.selected_finding') not in members:
+        st.session_state['w.plan.selected_finding'] = focus if focus in members else members[0]
+    selected = st.selectbox('Finding to review', members, key='w.plan.selected_finding',
+                            format_func=title, on_change=_select_finding)
+    cards = {selected: work[selected]}
     for rid, info in sorted(cards.items(), key=lambda x: (x[0] != focus, not x[0].startswith('HS'), title(x[0]))):
         stored = records.get(rid, {})
-        with st.expander(title(rid), expanded=rid == focus):
+        with st.expander(title(rid), expanded=True):
             st.caption(' · '.join(info['kinds']))
+            current = state.assessment()
+            if rid.startswith('HS'):
+                st.caption('Next: review the facts and the legal determination in section 3.5.')
+                st.button('Open this stop review', key=f'plan.stop.{rid}', on_click=state.go, args=(REVIEW_TITLE,))
+            else:
+                st.caption('Next: ' + next_step(current.action_plan.get(rid), approved(current, rid)))
+            if 'Information needed' in info['kinds']:
+                st.warning('This finding also has an evidence gap. Update the source information above; planning alone cannot clear it.')
             if rid.startswith('HS'):
                 steps = ('Read the facts and the grounds for the stop condition; identify what would need to change.',
                          'Document any changes and obtain a new reasoned legal determination. This action card cannot override the stop condition.')
@@ -148,26 +268,27 @@ def render(cfg, result):
                     if not stored.get('action'):
                         st.button('Use this suggestion and edit it', key=f'plan.suggest.{rid}',
                                   on_click=_use_suggestion, args=(rid,))
-                for f in ['action','rationale','owner','due_date']:
+                for f in ['action','owner','due_date']:
                     _field(rid, f, stored)
-                key=f'w.plan.{rid}.status'; state.seed(key, stored.get('status', 'TODO'))
-                st.selectbox('Work progress', ['TODO','IN_PROGRESS','AWAITING_REVIEW'], key=key,
-                             format_func=lambda v: {'TODO':'Action proposed / implementation pending',
-                                                   'IN_PROGRESS':'Implementation in progress',
-                                                   'AWAITING_REVIEW':'Submitted for verification — effectiveness not yet established'}[v],
-                             on_change=_sync,args=(rid,))
-                linked = [m for m in state.assessment().mitigations.values() if rid in m.linked_rule_ids and m.activated]
-                st.caption('Linked measures: ' + ('; '.join(cfg.mitigation(m.mitigation_id).measure for m in linked) or 'None yet'))
-                st.button('Choose a measure for this problem', key=f'plan.measure.{rid}',
-                          on_click=_choose_measure, args=(rid,))
-                st.caption('Linking a measure alone never closes this problem.')
+                with st.expander('Optional: progress and catalogue measures'):
+                    key=f'w.plan.{rid}.status'; state.seed(key, stored.get('status', 'TODO'))
+                    st.selectbox('Work progress', ['TODO','IN_PROGRESS','AWAITING_REVIEW'], key=key,
+                                 format_func=lambda v: {'TODO':'Action proposed / implementation pending',
+                                                       'IN_PROGRESS':'Implementation in progress',
+                                                       'AWAITING_REVIEW':'Submitted for verification — effectiveness not yet established'}[v],
+                                 on_change=_sync,args=(rid,))
+                    linked = [m for m in state.assessment().mitigations.values() if rid in m.linked_rule_ids and m.activated]
+                    st.caption('Linked measures: ' + ('; '.join(cfg.mitigation(m.mitigation_id).measure for m in linked) or 'None yet'))
+                    st.button('Choose a measure for this problem', key=f'plan.measure.{rid}',
+                              on_click=_choose_measure, args=(rid,))
+                    st.caption('Linking a measure alone never closes this problem.')
             if stage == STAGES[2]:
                 st.info('Complete this step when the action has been carried out. Include who implemented it and what changed.')
                 for f in ['implementation','evidence_refs']:
                     _field(rid,f,stored)
             if stage == STAGES[3]:
                 st.caption('First record the effectiveness check, including the verifier and date. Then record the decision on this specific problem.')
-                for f in ['verification_method','verification_result','verification_evidence']:
+                for f in ['rationale','verification_method','verification_result','verification_evidence']:
                     _field(rid,f,stored)
             if stage == STAGES[3]:
                 for f in ['reviewer','review_date','decision_reason']: _field(rid,f,stored)
@@ -184,5 +305,11 @@ def render(cfg, result):
                 st.caption('Missing answers must be updated at source. An approval does not erase evidence gaps or legal stop conditions.')
             with st.expander('Technical details'):
                 st.code(rid)
+                if stored.get('shared_action_id'):
+                    st.button('Make this finding a separate action', key=f'plan.detach.{rid}',
+                              on_click=_detach, args=(rid,))
                 st.write(info['ids'])
                 if stored.get('review_history'): st.json(stored['review_history'])
+                if stored.get('shared_history'):
+                    st.caption('Earlier shared action text')
+                    st.json(stored['shared_history'])

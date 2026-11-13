@@ -307,3 +307,42 @@ def test_a_complete_assessment_opens_on_the_findings():
     at = _loaded({})
     no_errors(at)
     assert at.header[0].value == RESULT_TITLE
+
+
+def test_completed_stop_review_is_hidden_until_requested():
+    at = goto(app({'elements': {'HS06.E2': 'NOT_MET'}, 'human_gates': {'HS06': 'COMPLETED'}}), REVIEW_TITLE)
+    no_errors(at)
+    assert not any('Review completed' in e.label for e in at.expander)
+    at.checkbox(key='w.hs.show_all').check().run()
+    no_errors(at)
+    assert any('Review completed — stop not established' in e.label for e in at.expander)
+    assert not any('Review in progress' in e.label for e in at.expander)
+
+
+def test_pure_information_gap_links_to_source_without_a_new_action_form():
+    from digcon.ui.labels import MITIGATION_TITLE
+    at = goto(app({'answers': {'C43': 'NOT_VERIFIED'}}), MITIGATION_TITLE)
+    no_errors(at)
+    assert any(b.key and b.key.startswith('gap.source.') and b.key.endswith('.C43') for b in at.button)
+    assert not any(t.key == 'w.plan.DQ-01.action' for t in at.text_area)
+
+
+def test_shared_action_can_be_edited_once_and_preserves_separate_reviews():
+    from digcon.domain.action_plan import share_action
+    from digcon.ui.labels import MITIGATION_TITLE
+    from digcon.ui.pages.action_plan import STAGES
+    saved = build_state({'elements': {'QUAL-01.E1': 'MET', 'DATA-01.E1': 'MET'}})
+    share_action(saved, ['QUAL-01', 'DATA-01'], dict(action='Restrict use', owner='Team',
+                 due_date='2026-12-01', implementation='', evidence_refs=[]), 'shared-1')
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.session_state[ui_state.STORE] = saved.model_dump(mode='json')
+    at.session_state[ui_state.NAV] = MITIGATION_TITLE
+    at.session_state['plan_focus'] = 'QUAL-01'
+    at.run()
+    no_errors(at)
+    at.radio(key='plan.stage.QUAL-01').set_value(STAGES[1]).run()
+    at.text_input(key='w.plan.QUAL-01.owner').input('Revised team').run()
+    no_errors(at)
+    records = at.session_state[ui_state.STORE]['action_plan']
+    assert records['QUAL-01']['owner'] == records['DATA-01']['owner'] == 'Revised team'
+    assert records['QUAL-01']['decision'] == records['DATA-01']['decision'] == 'PENDING'

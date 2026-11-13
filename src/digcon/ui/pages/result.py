@@ -138,7 +138,8 @@ def _risk_tab(cfg: ConfigBundle, result: EngineResult) -> None:
 
 
 def render(cfg: ConfigBundle, result: EngineResult) -> None:
-    opened = [h for h, v in result.hard_stops.items() if v.opened]
+    from digcon.domain.review_progress import stop_progress
+    opened = [h for h, v in result.hard_stops.items() if stop_progress(v)[1]]
     st.markdown(outcome_banner(result.outcome, OUTCOME_TITLES[result.outcome], OUTCOME_TEXT[result.outcome]),
                 unsafe_allow_html=True)
     st.markdown(f":material/info: **{RECOMMENDATION_NOTE}**")
@@ -148,7 +149,7 @@ def render(cfg: ConfigBundle, result: EngineResult) -> None:
         ("Evidence gaps", len(result.evidence_gaps)),
         ("Open remediations", len(result.open_remediations)),
         ("Conditions", len(result.open_conditions)),
-        ("Stop conditions open", len(opened)),
+        ("Stop checks needing attention", len(opened)),
         ("Legal reviews pending", len(result.pending_reviews)),
     ]), unsafe_allow_html=True)
 
